@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { matchAPI, interviewAPI, reviewAPI } from '../services/api';
-import { Star, Users, MessageSquare } from 'lucide-react';
+import { matchAPI, interviewAPI, reviewAPI, exportAPI } from '../services/api';
+import { Star, Users, MessageSquare, FileDown } from 'lucide-react';
 import ReviewCard from '../components/ReviewCard';
 import ReviewForm from '../components/ReviewForm';
 
@@ -79,6 +79,63 @@ const MatchDetail = () => {
       alert('Failed to update status');
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const fetchReviews = async () => {
+    try {
+      setLoadingReviews(true);
+      const reviewsResponse = await reviewAPI.getByMatch(matchId);
+      setReviews(reviewsResponse.data);
+      
+      const avgResponse = await reviewAPI.getAverageRating(matchId);
+      setAverageRating(avgResponse.data);
+    } catch (err) {
+      console.error('Error fetching reviews:', err);
+    } finally {
+      setLoadingReviews(false);
+    }
+  };
+
+  const handleReviewSubmit = async (reviewData) => {
+    try {
+      if (editingReview) {
+        await reviewAPI.update(editingReview._id, reviewData);
+      } else {
+        await reviewAPI.create(reviewData);
+      }
+      setShowReviewForm(false);
+      setEditingReview(null);
+      await fetchReviews();
+    } catch (err) {
+      throw new Error(err.response?.data?.error || 'Failed to submit review');
+    }
+  };
+
+  const handleReviewEdit = (review) => {
+    setEditingReview(review);
+    setShowReviewForm(true);
+  };
+
+  const handleReviewDelete = async (reviewId) => {
+    if (!window.confirm('Are you sure you want to delete this review?')) return;
+    
+    try {
+      await reviewAPI.delete(reviewId);
+      await fetchReviews();
+    } catch (err) {
+      alert('Failed to delete review');
+    }
+  };
+
+  const handleExportPDF = async () => {
+    try {
+      const response = await exportAPI.exportCandidatePDF(matchId);
+      const candidateName = match.resumeId.personalInfo?.fullName || 'candidate';
+      exportAPI.downloadFile(response.data, `${candidateName}_report.pdf`);
+    } catch (err) {
+      console.error('Error exporting PDF:', err);
+      alert('Failed to export PDF');
     }
   };
 
@@ -167,12 +224,23 @@ const MatchDetail = () => {
         <Link to={`/jobs/${match.jobId._id}/candidates`} className="text-sm text-blue-600 hover:underline mb-2 inline-block">
           ← Back to Candidates
         </Link>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          Match Analysis
-        </h1>
-        <p className="text-gray-600">
-          Detailed breakdown of candidate match for this position
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Match Analysis
+            </h1>
+            <p className="text-gray-600">
+              Detailed breakdown of candidate match for this position
+            </p>
+          </div>
+          <button
+            onClick={handleExportPDF}
+            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+          >
+            <FileDown className="w-4 h-4" />
+            Export PDF Report
+          </button>
+        </div>
       </div>
 
       {/* Overall Score Section */}

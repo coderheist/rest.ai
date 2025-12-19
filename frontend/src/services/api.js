@@ -519,4 +519,53 @@ export const reviewAPI = {
   }
 };
 
+// Export API calls
+export const exportAPI = {
+  // Export candidate match as PDF
+  exportCandidatePDF: async (matchId) => {
+    const response = await api.get(`/export/candidate/${matchId}/pdf`, {
+      responseType: 'blob'
+    });
+    return response;
+  },
+
+  // Export candidates as CSV
+  exportCandidatesCSV: async (jobId, filters = {}) => {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) params.append(key, value);
+    });
+    const response = await api.get(`/export/job/${jobId}/candidates/csv?${params.toString()}`, {
+      responseType: 'blob'
+    });
+    return response;
+  },
+
+  // Export job summary as PDF
+  exportJobSummaryPDF: async (jobId) => {
+    const response = await api.get(`/export/job/${jobId}/summary/pdf`, {
+      responseType: 'blob'
+    });
+    return response;
+  },
+
+  // Get export stats
+  getExportStats: async () => {
+    const response = await api.get('/export/stats');
+    return response.data;
+  },
+
+  // Helper function to download blob as file
+  downloadFile: (blob, filename) => {
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  }
+};
+
 export default api;

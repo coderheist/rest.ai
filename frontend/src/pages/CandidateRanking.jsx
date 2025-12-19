@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { matchAPI, jobAPI } from '../services/api';
+import { matchAPI, jobAPI, exportAPI } from '../services/api';
 import MatchCard from '../components/MatchCard';
+import { FileDown, FileSpreadsheet, FileText } from 'lucide-react';
 
 const CandidateRanking = () => {
   const { jobId } = useParams();
@@ -68,6 +69,26 @@ const CandidateRanking = () => {
     }));
   };
 
+  const handleExportCSV = async () => {
+    try {
+      const response = await exportAPI.exportCandidatesCSV(jobId, filters);
+      exportAPI.downloadFile(response.data, `candidates_${job?.title || jobId}.csv`);
+    } catch (err) {
+      console.error('Error exporting CSV:', err);
+      alert('Failed to export CSV');
+    }
+  };
+
+  const handleExportJobPDF = async () => {
+    try {
+      const response = await exportAPI.exportJobSummaryPDF(jobId);
+      exportAPI.downloadFile(response.data, `job_summary_${job?.title || jobId}.pdf`);
+    } catch (err) {
+      console.error('Error exporting job summary:', err);
+      alert('Failed to export job summary');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -94,9 +115,24 @@ const CandidateRanking = () => {
               </p>
             )}
           </div>
-          <button
-            onClick={handleCalculateMatches}
-            disabled={calculating}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleExportCSV}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              Export CSV
+            </button>
+            <button
+              onClick={handleExportJobPDF}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            >
+              <FileText className="w-4 h-4" />
+              Job Summary PDF
+            </button>
+            <button
+              onClick={handleCalculateMatches}
+              disabled={calculating}
             className={`px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium ${
               calculating ? 'opacity-50 cursor-not-allowed' : ''
             }`}

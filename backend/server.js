@@ -13,6 +13,7 @@ import interviewRoutes from './routes/interviewRoutes.js';
 import noteRoutes from './routes/noteRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
 import reviewRoutes from './routes/reviewRoutes.js';
+import exportRoutes from './routes/exportRoutes.js';
 import { errorHandler, notFound } from './middleware/error.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -78,6 +79,7 @@ app.use('/api/interviews', interviewRoutes);
 app.use('/api/notes', noteRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/export', exportRoutes);
 
 // 404 handler
 app.use(notFound);
