@@ -14,6 +14,12 @@ import {
 } from '../controllers/jobController.js';
 import { protect } from '../middleware/auth.js';
 import { checkJobLimit } from '../middleware/planLimits.js';
+import {
+  validateCreateJob,
+  validateUpdateJob,
+  validateJobQuery,
+  validateMongoId
+} from '../middleware/validation.js';
 
 // Public routes (none for jobs - all require authentication)
 
@@ -31,18 +37,18 @@ router.patch('/bulk/status', bulkUpdateStatus);
 
 // Main CRUD routes
 router.route('/')
-  .get(getJobs)
-  .post(checkJobLimit, createJob); // Check limit before creating
+  .get(validateJobQuery, getJobs)
+  .post(validateCreateJob, checkJobLimit, createJob); // Check limit before creating
 
 router.route('/:id')
-  .get(getJob)
-  .put(updateJob)
-  .delete(deleteJob);
+  .get(validateMongoId('id'), getJob)
+  .put(validateUpdateJob, updateJob)
+  .delete(validateMongoId('id'), deleteJob);
 
 // Status management
-router.patch('/:id/status', changeJobStatus);
+router.patch('/:id/status', validateMongoId('id'), changeJobStatus);
 
 // Duplicate job
-router.post('/:id/duplicate', checkJobLimit, duplicateJob);
+router.post('/:id/duplicate', validateMongoId('id'), checkJobLimit, duplicateJob);
 
 export default router;

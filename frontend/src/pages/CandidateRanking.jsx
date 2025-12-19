@@ -133,12 +133,13 @@ const CandidateRanking = () => {
             <button
               onClick={handleCalculateMatches}
               disabled={calculating}
-            className={`px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium ${
-              calculating ? 'opacity-50 cursor-not-allowed' : ''
-            }`}
-          >
-            {calculating ? 'Calculating...' : 'Recalculate All Matches'}
-          </button>
+              className={`px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium ${
+                calculating ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+            >
+              {calculating ? 'Calculating...' : 'Recalculate All Matches'}
+            </button>
+          </div>
         </div>
       </div>
 

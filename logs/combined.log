@@ -1,0 +1,25 @@
+{"level":"info","message":"🚀 Server running on port 5000","service":"ai-resume-screener","timestamp":"2025-12-19 17:24:12"}
+{"level":"info","message":"📊 Environment: development","service":"ai-resume-screener","timestamp":"2025-12-19 17:24:12"}
+{"level":"info","message":"🔗 API URL: http://localhost:5000/api","service":"ai-resume-screener","timestamp":"2025-12-19 17:24:12"}
+{"level":"info","message":"🏥 Health check: http://localhost:5000/api/health","service":"ai-resume-screener","timestamp":"2025-12-19 17:24:12"}
+{"level":"info","message":"🚀 Server running on port 5000","service":"ai-resume-screener","timestamp":"2025-12-19 17:24:25"}
+{"level":"info","message":"📊 Environment: development","service":"ai-resume-screener","timestamp":"2025-12-19 17:24:25"}
+{"level":"info","message":"🔗 API URL: http://localhost:5000/api","service":"ai-resume-screener","timestamp":"2025-12-19 17:24:25"}
+{"level":"info","message":"🏥 Health check: http://localhost:5000/api/health","service":"ai-resume-screener","timestamp":"2025-12-19 17:24:25"}
+{"level":"info","message":"🚀 Server running on port 5000","service":"ai-resume-screener","timestamp":"2025-12-19 17:24:42"}
+{"level":"info","message":"📊 Environment: development","service":"ai-resume-screener","timestamp":"2025-12-19 17:24:42"}
+{"level":"info","message":"🔗 API URL: http://localhost:5000/api","service":"ai-resume-screener","timestamp":"2025-12-19 17:24:42"}
+{"level":"info","message":"🏥 Health check: http://localhost:5000/api/health","service":"ai-resume-screener","timestamp":"2025-12-19 17:24:42"}
+{"level":"info","message":"🚀 Server running on port 5000","service":"ai-resume-screener","timestamp":"2025-12-19 17:24:50"}
+{"level":"info","message":"📊 Environment: development","service":"ai-resume-screener","timestamp":"2025-12-19 17:24:50"}
+{"level":"info","message":"🔗 API URL: http://localhost:5000/api","service":"ai-resume-screener","timestamp":"2025-12-19 17:24:50"}
+{"level":"info","message":"🏥 Health check: http://localhost:5000/api/health","service":"ai-resume-screener","timestamp":"2025-12-19 17:24:50"}
+{"level":"info","message":"🚀 Server running on port 5000","service":"ai-resume-screener","timestamp":"2025-12-19 17:24:58"}
+{"level":"info","message":"📊 Environment: development","service":"ai-resume-screener","timestamp":"2025-12-19 17:24:58"}
+{"level":"info","message":"🔗 API URL: http://localhost:5000/api","service":"ai-resume-screener","timestamp":"2025-12-19 17:24:58"}
+{"level":"info","message":"🏥 Health check: http://localhost:5000/api/health","service":"ai-resume-screener","timestamp":"2025-12-19 17:24:58"}
+{"level":"info","message":"🚀 Server running on port 5000","service":"ai-resume-screener","timestamp":"2025-12-19 17:33:11"}
+{"level":"info","message":"📊 Environment: development","service":"ai-resume-screener","timestamp":"2025-12-19 17:33:11"}
+{"level":"info","message":"🔗 API URL: http://localhost:5000/api","service":"ai-resume-screener","timestamp":"2025-12-19 17:33:11"}
+{"level":"info","message":"🏥 Health check: http://localhost:5000/api/health","service":"ai-resume-screener","timestamp":"2025-12-19 17:33:11"}
+{"level":"info","message":"SIGINT signal received: closing HTTP server","service":"ai-resume-screener","timestamp":"2025-12-19 17:33:32"}

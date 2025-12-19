@@ -85,63 +85,6 @@ const MatchDetail = () => {
   const fetchReviews = async () => {
     try {
       setLoadingReviews(true);
-      const reviewsResponse = await reviewAPI.getByMatch(matchId);
-      setReviews(reviewsResponse.data);
-      
-      const avgResponse = await reviewAPI.getAverageRating(matchId);
-      setAverageRating(avgResponse.data);
-    } catch (err) {
-      console.error('Error fetching reviews:', err);
-    } finally {
-      setLoadingReviews(false);
-    }
-  };
-
-  const handleReviewSubmit = async (reviewData) => {
-    try {
-      if (editingReview) {
-        await reviewAPI.update(editingReview._id, reviewData);
-      } else {
-        await reviewAPI.create(reviewData);
-      }
-      setShowReviewForm(false);
-      setEditingReview(null);
-      await fetchReviews();
-    } catch (err) {
-      throw new Error(err.response?.data?.error || 'Failed to submit review');
-    }
-  };
-
-  const handleReviewEdit = (review) => {
-    setEditingReview(review);
-    setShowReviewForm(true);
-  };
-
-  const handleReviewDelete = async (reviewId) => {
-    if (!window.confirm('Are you sure you want to delete this review?')) return;
-    
-    try {
-      await reviewAPI.delete(reviewId);
-      await fetchReviews();
-    } catch (err) {
-      alert('Failed to delete review');
-    }
-  };
-
-  const handleExportPDF = async () => {
-    try {
-      const response = await exportAPI.exportCandidatePDF(matchId);
-      const candidateName = match.resumeId.personalInfo?.fullName || 'candidate';
-      exportAPI.downloadFile(response.data, `${candidateName}_report.pdf`);
-    } catch (err) {
-      console.error('Error exporting PDF:', err);
-      alert('Failed to export PDF');
-    }
-  };
-
-  const fetchReviews = async () => {
-    try {
-      setLoadingReviews(true);
       const [reviewsRes, avgRes] = await Promise.all([
         reviewAPI.getByMatch(matchId),
         reviewAPI.getAverageRating(matchId)
@@ -185,6 +128,17 @@ const MatchDetail = () => {
       await fetchMatch(); // Refresh match to update review stats
     } catch (err) {
       alert(err.response?.data?.error || 'Failed to delete review');
+    }
+  };
+
+  const handleExportPDF = async () => {
+    try {
+      const response = await exportAPI.exportCandidatePDF(matchId);
+      const candidateName = match.resumeId.personalInfo?.fullName || 'candidate';
+      exportAPI.downloadFile(response.data, `${candidateName}_report.pdf`);
+    } catch (err) {
+      console.error('Error exporting PDF:', err);
+      alert('Failed to export PDF');
     }
   };
 

@@ -1,6 +1,11 @@
 import express from 'express';
 import { protect } from '../middleware/auth.js';
 import * as reviewController from '../controllers/reviewController.js';
+import {
+  validateCreateReview,
+  validateUpdateReview,
+  validateMongoId
+} from '../middleware/validation.js';
 
 const router = express.Router();
 
@@ -18,9 +23,9 @@ router.get('/job/:jobId', reviewController.getReviewsByJob);
 router.get('/reviewer/:reviewerId', reviewController.getReviewsByReviewer);
 
 // CRUD operations
-router.post('/', reviewController.createReview);
-router.get('/:id', reviewController.getReviewById);
-router.put('/:id', reviewController.updateReview);
-router.delete('/:id', reviewController.deleteReview);
+router.post('/', validateCreateReview, reviewController.createReview);
+router.get('/:id', validateMongoId('id'), reviewController.getReviewById);
+router.put('/:id', validateUpdateReview, reviewController.updateReview);
+router.delete('/:id', validateMongoId('id'), reviewController.deleteReview);
 
 export default router;
