@@ -458,4 +458,65 @@ export const noteAPI = {
   }
 };
 
+// Review API calls
+export const reviewAPI = {
+  create: async (reviewData) => {
+    const response = await api.post('/reviews', reviewData);
+    return response.data;
+  },
+
+  getById: async (reviewId) => {
+    const response = await api.get(`/reviews/${reviewId}`);
+    return response.data;
+  },
+
+  getByMatch: async (matchId) => {
+    const response = await api.get(`/reviews/match/${matchId}`);
+    return response.data;
+  },
+
+  getByJob: async (jobId, filters = {}) => {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) params.append(key, value);
+    });
+    const response = await api.get(`/reviews/job/${jobId}?${params.toString()}`);
+    return response.data;
+  },
+
+  getByReviewer: async (reviewerId, limit = 50) => {
+    const response = await api.get(`/reviews/reviewer/${reviewerId}?limit=${limit}`);
+    return response.data;
+  },
+
+  update: async (reviewId, reviewData) => {
+    const response = await api.put(`/reviews/${reviewId}`, reviewData);
+    return response.data;
+  },
+
+  delete: async (reviewId) => {
+    const response = await api.delete(`/reviews/${reviewId}`);
+    return response.data;
+  },
+
+  getAverageRating: async (matchId) => {
+    const response = await api.get(`/reviews/match/${matchId}/average`);
+    return response.data;
+  },
+
+  getRecommendationDistribution: async (jobId) => {
+    const response = await api.get(`/reviews/job/${jobId}/recommendations`);
+    return response.data;
+  },
+
+  getStats: async (filters = {}) => {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) params.append(key, value);
+    });
+    const response = await api.get(`/reviews/stats?${params.toString()}`);
+    return response.data;
+  }
+};
+
 export default api;

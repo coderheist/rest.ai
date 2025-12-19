@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { matchAPI, interviewAPI } from '../services/api';
+import { matchAPI, interviewAPI, reviewAPI } from '../services/api';
+import { Star, Users, MessageSquare } from 'lucide-react';
+import ReviewCard from '../components/ReviewCard';
+import ReviewForm from '../components/ReviewForm';
 
 const MatchDetail = () => {
   const { matchId } = useParams();
@@ -11,9 +14,15 @@ const MatchDetail = () => {
   const [updating, setUpdating] = useState(false);
   const [generatingKit, setGeneratingKit] = useState(false);
   const [interviewKit, setInterviewKit] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [averageRating, setAverageRating] = useState(null);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [editingReview, setEditingReview] = useState(null);
+  const [loadingReviews, setLoadingReviews] = useState(false);
 
   useEffect(() => {
     fetchMatch();
+    fetchReviews();
   }, [matchId]);
 
   const fetchMatch = async () => {
@@ -70,6 +79,55 @@ const MatchDetail = () => {
       alert('Failed to update status');
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const fetchReviews = async () => {
+    try {
+      setLoadingReviews(true);
+      const [reviewsRes, avgRes] = await Promise.all([
+        reviewAPI.getByMatch(matchId),
+        reviewAPI.getAverageRating(matchId)
+      ]);
+      setReviews(reviewsRes.data.reviews || []);
+      setAverageRating(avgRes.data);
+    } catch (err) {
+      console.error('Error fetching reviews:', err);
+    } finally {
+      setLoadingReviews(false);
+    }
+  };
+
+  const handleReviewSubmit = async (reviewData) => {
+    try {
+      if (editingReview) {
+        await reviewAPI.update(editingReview._id, reviewData);
+      } else {
+        await reviewAPI.create(reviewData);
+      }
+      setShowReviewForm(false);
+      setEditingReview(null);
+      await fetchReviews();
+      await fetchMatch(); // Refresh match to update review stats
+    } catch (err) {
+      throw new Error(err.response?.data?.error || 'Failed to submit review');
+    }
+  };
+
+  const handleReviewEdit = (review) => {
+    setEditingReview(review);
+    setShowReviewForm(true);
+  };
+
+  const handleReviewDelete = async (reviewId) => {
+    if (!window.confirm('Are you sure you want to delete this review?')) return;
+    
+    try {
+      await reviewAPI.delete(reviewId);
+      await fetchReviews();
+      await fetchMatch(); // Refresh match to update review stats
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to delete review');
     }
   };
 
@@ -376,6 +434,135 @@ const MatchDetail = () => {
             >
               {generatingKit ? '⏳ Generating Kit...' : '✨ Generate Interview Kit'}
             </button>
+          </div>
+        )}
+      </div>
+
+      {/* Team Reviews Section */}
+      <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Team Reviews
+              {reviews.length > 0 && (
+                <span className="text-sm font-normal text-gray-500">({reviews.length})</span>
+              )}
+            </h3>
+            {averageRating && averageRating.reviewCount > 0 && (
+              <div className="flex items-center gap-3 mt-2">
+                <div className="flex items-center gap-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star
+                      key={star}
+                      className={`w-5 h-5 ${
+                        star <= Math.round(averageRating.averageRating)
+                          ? 'fill-yellow-400 text-yellow-400'
+                          : 'text-gray-300'
+                      }`}
+                    />
+                  ))}
+                </div>
+                <span className="text-lg font-semibold text-gray-900">
+                  {averageRating.averageRating.toFixed(1)}
+                </span>
+                <span className="text-sm text-gray-500">
+                  ({averageRating.reviewCount} {averageRating.reviewCount === 1 ? 'review' : 'reviews'})
+                </span>
+              </div>
+            )}
+          </div>
+          {!showReviewForm && (
+            <button
+              onClick={() => setShowReviewForm(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <MessageSquare className="w-4 h-4" />
+              Write Review
+            </button>
+          )}
+        </div>
+
+        {/* Average Ratings Breakdown */}
+        {averageRating && averageRating.reviewCount > 0 && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-gray-50 rounded-lg mb-6">
+            {averageRating.averageTechnical > 0 && (
+              <div>
+                <div className="text-xs text-gray-600 mb-1">Technical</div>
+                <div className="flex items-center gap-1">
+                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                  <span className="font-semibold">{averageRating.averageTechnical.toFixed(1)}</span>
+                </div>
+              </div>
+            )}
+            {averageRating.averageCommunication > 0 && (
+              <div>
+                <div className="text-xs text-gray-600 mb-1">Communication</div>
+                <div className="flex items-center gap-1">
+                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                  <span className="font-semibold">{averageRating.averageCommunication.toFixed(1)}</span>
+                </div>
+              </div>
+            )}
+            {averageRating.averageCultureFit > 0 && (
+              <div>
+                <div className="text-xs text-gray-600 mb-1">Culture Fit</div>
+                <div className="flex items-center gap-1">
+                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                  <span className="font-semibold">{averageRating.averageCultureFit.toFixed(1)}</span>
+                </div>
+              </div>
+            )}
+            {averageRating.averageProblemSolving > 0 && (
+              <div>
+                <div className="text-xs text-gray-600 mb-1">Problem Solving</div>
+                <div className="flex items-center gap-1">
+                  <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                  <span className="font-semibold">{averageRating.averageProblemSolving.toFixed(1)}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Review Form */}
+        {showReviewForm && (
+          <div className="mb-6">
+            <ReviewForm
+              matchId={matchId}
+              jobId={match.jobId._id}
+              resumeId={match.resumeId._id}
+              existingReview={editingReview}
+              onSubmit={handleReviewSubmit}
+              onCancel={() => {
+                setShowReviewForm(false);
+                setEditingReview(null);
+              }}
+            />
+          </div>
+        )}
+
+        {/* Reviews List */}
+        {loadingReviews ? (
+          <div className="flex justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
+        ) : reviews.length > 0 ? (
+          <div className="space-y-4">
+            {reviews.map((review) => (
+              <ReviewCard
+                key={review._id}
+                review={review}
+                onEdit={handleReviewEdit}
+                onDelete={handleReviewDelete}
+                canEdit={true} // You might want to check if current user is the reviewer
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8">
+            <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500">No reviews yet. Be the first to review this candidate!</p>
           </div>
         )}
       </div>

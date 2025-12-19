@@ -129,7 +129,42 @@ const matchSchema = new mongoose.Schema({
     ref: 'User'
   },
 
-  shortlistedAt: Date
+  shortlistedAt: Date,
+
+  // Team collaboration
+  assignedInterviewers: [{
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    assignedAt: {
+      type: Date,
+      default: Date.now
+    },
+    assignedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }
+  }],
+
+  reviewStatus: {
+    type: String,
+    enum: ['pending', 'in_review', 'reviewed', 'approved', 'rejected'],
+    default: 'pending',
+    index: true
+  },
+
+  reviewCount: {
+    type: Number,
+    default: 0
+  },
+
+  averageReviewRating: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 5
+  }
 
 }, {
   timestamps: true
@@ -182,6 +217,60 @@ matchSchema.methods.toggleShortlist = async function(userId) {
     this.shortlistedBy = null;
     this.shortlistedAt = null;
   }
+  await this.save();
+  return this;
+};
+
+/**
+ * Assign interviewer to this match
+ */
+matchSchema.methods.assignInterviewer = async function(userId, assignedBy) {
+  const alreadyAssigned = this.assignedInterviewers.some(
+    interviewer => interviewer.userId.toString() === userId.toString()
+  );
+
+  if (alreadyAssigned) {
+    throw new Error('Interviewer already assigned to this candidate');
+  }
+
+  this.assignedInterviewers.push({
+    userId,
+    assignedBy,
+    assignedAt: new Date()
+  });
+
+  await this.save();
+  return this;
+};
+
+/**
+ * Unassign interviewer from this match
+ */
+matchSchema.methods.unassignInterviewer = async function(userId) {
+  this.assignedInterviewers = this.assignedInterviewers.filter(
+    interviewer => interviewer.userId.toString() !== userId.toString()
+  );
+
+  await this.save();
+  return this;
+};
+
+/**
+ * Update review statistics
+ */
+matchSchema.methods.updateReviewStats = async function(reviewCount, averageRating) {
+  this.reviewCount = reviewCount;
+  this.averageReviewRating = averageRating;
+  
+  // Update review status based on review count
+  if (reviewCount === 0) {
+    this.reviewStatus = 'pending';
+  } else if (reviewCount < 2) {
+    this.reviewStatus = 'in_review';
+  } else {
+    this.reviewStatus = 'reviewed';
+  }
+
   await this.save();
   return this;
 };

@@ -267,3 +267,41 @@ export const getShortlistedCandidates = asyncHandler(async (req, res) => {
     data: matches
   });
 });
+
+/**
+ * @route   POST /api/matches/:matchId/assign-interviewer
+ * @desc    Assign an interviewer to a match
+ * @access  Private
+ */
+export const assignInterviewer = asyncHandler(async (req, res) => {
+  const { matchId } = req.params;
+  const { userId } = req.body;
+  const tenantId = req.user.tenantId;
+  const assignedBy = req.user._id;
+
+  const match = await matchService.assignInterviewer(matchId, userId, assignedBy, tenantId);
+
+  res.json({
+    success: true,
+    data: match,
+    message: 'Interviewer assigned successfully'
+  });
+});
+
+/**
+ * @route   DELETE /api/matches/:matchId/assign-interviewer/:userId
+ * @desc    Unassign an interviewer from a match
+ * @access  Private
+ */
+export const unassignInterviewer = asyncHandler(async (req, res) => {
+  const { matchId, userId } = req.params;
+  const tenantId = req.user.tenantId;
+
+  const match = await matchService.unassignInterviewer(matchId, userId, tenantId);
+
+  res.json({
+    success: true,
+    data: match,
+    message: 'Interviewer unassigned successfully'
+  });
+});

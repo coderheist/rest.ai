@@ -514,6 +514,54 @@ class MatchService {
       throw new Error(`Failed to get shortlisted candidates: ${error.message}`);
     }
   }
+
+  /**
+   * Assign interviewer to a match
+   */
+  async assignInterviewer(matchId, userId, assignedBy, tenantId) {
+    try {
+      const match = await Match.findOne({ _id: matchId, tenantId });
+      if (!match) {
+        throw new Error('Match not found');
+      }
+
+      await match.assignInterviewer(userId, assignedBy);
+      
+      await match.populate([
+        { path: 'jobId', select: 'title department' },
+        { path: 'resumeId', select: 'candidateInfo fileName' },
+        { path: 'assignedInterviewers.userId', select: 'name email' },
+        { path: 'assignedInterviewers.assignedBy', select: 'name email' }
+      ]);
+
+      return match;
+    } catch (error) {
+      throw new Error(`Failed to assign interviewer: ${error.message}`);
+    }
+  }
+
+  /**
+   * Unassign interviewer from a match
+   */
+  async unassignInterviewer(matchId, userId, tenantId) {
+    try {
+      const match = await Match.findOne({ _id: matchId, tenantId });
+      if (!match) {
+        throw new Error('Match not found');
+      }
+
+      await match.unassignInterviewer(userId);
+      
+      await match.populate([
+        { path: 'jobId', select: 'title department' },
+        { path: 'resumeId', select: 'candidateInfo fileName' }
+      ]);
+
+      return match;
+    } catch (error) {
+      throw new Error(`Failed to unassign interviewer: ${error.message}`);
+    }
+  }
 }
 
 export default new MatchService();

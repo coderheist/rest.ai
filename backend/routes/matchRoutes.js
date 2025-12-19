@@ -11,7 +11,9 @@ import {
   searchMatches,
   updateRankings,
   toggleShortlist,
-  getShortlistedCandidates
+  getShortlistedCandidates,
+  assignInterviewer,
+  unassignInterviewer
 } from '../controllers/matchController.js';
 import { protect } from '../middleware/auth.js';
 
@@ -37,5 +39,9 @@ router.get('/:matchId', getMatch);
 // Update match
 router.patch('/:matchId/status', updateMatchStatus);
 router.patch('/:matchId/shortlist', toggleShortlist);
+
+// Interviewer assignment
+router.post('/:matchId/assign-interviewer', assignInterviewer);
+router.delete('/:matchId/assign-interviewer/:userId', unassignInterviewer);
 
 export default router;
