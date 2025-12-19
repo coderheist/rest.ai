@@ -1,13 +1,6 @@
 import morgan from 'morgan';
 import logger from '../utils/logger.js';
 
-// Custom Morgan token for response time in milliseconds
-morgan.token('response-time-ms', (req, res) => {
-  if (!req._startTime) return '0';
-  const diff = process.hrtime(req._startTime);
-  return (diff[0] * 1e3 + diff[1] * 1e-6).toFixed(2);
-});
-
 // Custom Morgan token for user ID
 morgan.token('user-id', (req) => {
   return req.user?._id || 'anonymous';
@@ -18,8 +11,8 @@ morgan.token('tenant-id', (req) => {
   return req.user?.tenantId || 'none';
 });
 
-// Define Morgan format
-const morganFormat = ':method :url :status :response-time-ms ms - :user-id - :tenant-id - :remote-addr';
+// Define Morgan format - using built-in :response-time instead of custom
+const morganFormat = ':method :url :status :response-time ms - :user-id - :tenant-id - :remote-addr';
 
 // Create Morgan middleware that uses Winston
 export const requestLogger = morgan(morganFormat, {
