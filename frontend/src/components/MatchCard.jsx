@@ -1,7 +1,13 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import PropTypes from 'prop-types';
+import { matchAPI } from '../services/api';
+import { Star } from 'lucide-react';
 
-const MatchCard = ({ match, showJob = true, showResume = true }) => {
+const MatchCard = ({ match, showJob = true, showResume = true, onShortlistChange }) => {
+  const [isShortlisted, setIsShortlisted] = useState(match.isShortlisted || false);
+  const [loading, setLoading] = useState(false);
+
   // Score color based on match quality
   const getScoreColor = (score) => {
     if (score >= 80) return 'text-green-600 bg-green-50 border-green-200';
@@ -9,6 +15,24 @@ const MatchCard = ({ match, showJob = true, showResume = true }) => {
     if (score >= 60) return 'text-yellow-600 bg-yellow-50 border-yellow-200';
     if (score >= 50) return 'text-orange-600 bg-orange-50 border-orange-200';
     return 'text-red-600 bg-red-50 border-red-200';
+  };
+
+  const handleToggleShortlist = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    try {
+      setLoading(true);
+      const response = await matchAPI.toggleShortlist(match._id);
+      setIsShortlisted(response.data.isShortlisted);
+      if (onShortlistChange) {
+        onShortlistChange(response.data);
+      }
+    } catch (error) {
+      console.error('Error toggling shortlist:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Recommendation badge
@@ -57,8 +81,20 @@ const MatchCard = ({ match, showJob = true, showResume = true }) => {
           </div>
         </div>
 
-        {/* Badges */}
+        {/* Badges and Shortlist */}
         <div className="flex flex-col gap-2 items-end">
+          <button
+            onClick={handleToggleShortlist}
+            disabled={loading}
+            className={`p-2 rounded-lg transition-all ${
+              isShortlisted
+                ? 'bg-yellow-100 text-yellow-600 hover:bg-yellow-200'
+                : 'bg-gray-100 text-gray-400 hover:bg-gray-200 hover:text-yellow-600'
+            } disabled:opacity-50`}
+            title={isShortlisted ? 'Remove from shortlist' : 'Add to shortlist'}
+          >
+            <Star className={`w-5 h-5 ${isShortlisted ? 'fill-current' : ''}`} />
+          </button>
           {getRecommendationBadge(match.recommendation)}
           {getStatusBadge(match.status)}
           {match.rank && (
@@ -233,6 +269,7 @@ MatchCard.propTypes = {
     recommendation: PropTypes.string.isRequired,
     status: PropTypes.string.isRequired,
     rank: PropTypes.number,
+    isShortlisted: PropTypes.bool,
     jobId: PropTypes.shape({
       _id: PropTypes.string,
       title: PropTypes.string,
@@ -262,7 +299,8 @@ MatchCard.propTypes = {
     semanticSimilarity: PropTypes.number
   }).isRequired,
   showJob: PropTypes.bool,
-  showResume: PropTypes.bool
+  showResume: PropTypes.bool,
+  onShortlistChange: PropTypes.func
 };
 
 export default MatchCard;

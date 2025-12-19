@@ -353,6 +353,108 @@ export const matchAPI = {
   updateRankings: async (jobId) => {
     const response = await api.post(`/matches/job/${jobId}/update-rankings`);
     return response.data;
+  },
+
+  // Toggle shortlist status
+  toggleShortlist: async (matchId) => {
+    const response = await api.patch(`/matches/${matchId}/shortlist`);
+    return response.data;
+  },
+
+  // Get shortlisted candidates
+  getShortlisted: async (filters = {}) => {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) params.append(key, value);
+    });
+    const response = await api.get(`/matches/shortlisted?${params.toString()}`);
+    return response.data;
+  }
+};
+
+// Dashboard API calls
+export const dashboardAPI = {
+  getStats: async () => {
+    const response = await api.get('/dashboard/stats');
+    return response.data;
+  },
+
+  getPipeline: async () => {
+    const response = await api.get('/dashboard/pipeline');
+    return response.data;
+  },
+
+  getActivities: async (limit = 20) => {
+    const response = await api.get(`/dashboard/activities?limit=${limit}`);
+    return response.data;
+  },
+
+  getAnalytics: async (days = 30) => {
+    const response = await api.get(`/dashboard/analytics?days=${days}`);
+    return response.data;
+  },
+
+  getTopJobs: async (limit = 5) => {
+    const response = await api.get(`/dashboard/top-jobs?limit=${limit}`);
+    return response.data;
+  },
+
+  getUsage: async () => {
+    const response = await api.get('/dashboard/usage');
+    return response.data;
+  }
+};
+
+// Notes API calls
+export const noteAPI = {
+  create: async (noteData) => {
+    const response = await api.post('/notes', noteData);
+    return response.data;
+  },
+
+  getById: async (noteId) => {
+    const response = await api.get(`/notes/${noteId}`);
+    return response.data;
+  },
+
+  getForEntity: async (entityType, entityId) => {
+    const response = await api.get(`/notes/${entityType}/${entityId}`);
+    return response.data;
+  },
+
+  getRecent: async (limit = 10) => {
+    const response = await api.get(`/notes/recent?limit=${limit}`);
+    return response.data;
+  },
+
+  getUserNotes: async (userId, limit = 50) => {
+    const response = await api.get(`/notes/user/${userId}?limit=${limit}`);
+    return response.data;
+  },
+
+  update: async (noteId, noteData) => {
+    const response = await api.put(`/notes/${noteId}`, noteData);
+    return response.data;
+  },
+
+  togglePin: async (noteId) => {
+    const response = await api.patch(`/notes/${noteId}/pin`);
+    return response.data;
+  },
+
+  delete: async (noteId) => {
+    const response = await api.delete(`/notes/${noteId}`);
+    return response.data;
+  },
+
+  search: async (query, filters = {}) => {
+    const params = new URLSearchParams();
+    if (query) params.append('q', query);
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) params.append(key, value);
+    });
+    const response = await api.get(`/notes/search?${params.toString()}`);
+    return response.data;
   }
 };
 

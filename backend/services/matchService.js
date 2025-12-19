@@ -459,6 +459,61 @@ class MatchService {
       throw new Error(`Failed to search matches: ${error.message}`);
     }
   }
+
+  /**
+   * Toggle shortlist status for a match
+   */
+  async toggleShortlist(matchId, userId, tenantId) {
+    try {
+      const match = await Match.findOne({ _id: matchId, tenantId });
+      if (!match) {
+        throw new Error('Match not found');
+      }
+
+      await match.toggleShortlist(userId);
+      
+      // Populate references for return
+      await match.populate([
+        { path: 'jobId', select: 'title department status' },
+        { path: 'resumeId', select: 'fileName candidateInfo' }
+      ]);
+
+      return match;
+    } catch (error) {
+      throw new Error(`Failed to toggle shortlist: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get shortlisted candidates
+   */
+  async getShortlistedCandidates(tenantId, filters = {}) {
+    try {
+      const query = { 
+        tenantId, 
+        isShortlisted: true 
+      };
+
+      if (filters.jobId) {
+        query.jobId = filters.jobId;
+      }
+
+      if (filters.minScore) {
+        query.overallScore = { $gte: filters.minScore };
+      }
+
+      const matches = await Match.find(query)
+        .populate('jobId', 'title department status')
+        .populate('resumeId', 'fileName candidateInfo skills experience')
+        .populate('shortlistedBy', 'name email')
+        .sort({ shortlistedAt: -1 })
+        .limit(filters.limit || 100);
+
+      return matches;
+    } catch (error) {
+      throw new Error(`Failed to get shortlisted candidates: ${error.message}`);
+    }
+  }
 }
 
 export default new MatchService();

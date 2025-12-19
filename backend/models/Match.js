@@ -115,7 +115,21 @@ const matchSchema = new mongoose.Schema({
   reviewNotes: String,
 
   // Ranking info
-  rank: Number
+  rank: Number,
+
+  // Shortlist flag
+  isShortlisted: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+
+  shortlistedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+
+  shortlistedAt: Date
 
 }, {
   timestamps: true
@@ -151,6 +165,22 @@ matchSchema.methods.updateStatus = async function(status, userId, notes) {
   }
   if (notes) {
     this.reviewNotes = notes;
+  }
+  await this.save();
+  return this;
+};
+
+/**
+ * Toggle shortlist status
+ */
+matchSchema.methods.toggleShortlist = async function(userId) {
+  this.isShortlisted = !this.isShortlisted;
+  if (this.isShortlisted) {
+    this.shortlistedBy = userId;
+    this.shortlistedAt = new Date();
+  } else {
+    this.shortlistedBy = null;
+    this.shortlistedAt = null;
   }
   await this.save();
   return this;

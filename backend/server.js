@@ -10,6 +10,8 @@ import jobRoutes from './routes/jobRoutes.js';
 import resumeRoutes from './routes/resumeRoutes.js';
 import matchRoutes from './routes/matchRoutes.js';
 import interviewRoutes from './routes/interviewRoutes.js';
+import noteRoutes from './routes/noteRoutes.js';
+import dashboardRoutes from './routes/dashboardRoutes.js';
 import { errorHandler, notFound } from './middleware/error.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -72,6 +74,8 @@ app.use('/api/jobs', jobRoutes);
 app.use('/api/resumes', resumeRoutes);
 app.use('/api/matches', matchRoutes);
 app.use('/api/interviews', interviewRoutes);
+app.use('/api/notes', noteRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // 404 handler
 app.use(notFound);

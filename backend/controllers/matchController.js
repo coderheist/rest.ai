@@ -226,3 +226,44 @@ export const updateRankings = asyncHandler(async (req, res) => {
     message: `Updated rankings for ${count} candidates`
   });
 });
+
+/**
+ * @route   PATCH /api/matches/:matchId/shortlist
+ * @desc    Toggle shortlist status for a match
+ * @access  Private
+ */
+export const toggleShortlist = asyncHandler(async (req, res) => {
+  const { matchId } = req.params;
+  const tenantId = req.user.tenantId;
+  const userId = req.user._id;
+
+  const match = await matchService.toggleShortlist(matchId, userId, tenantId);
+
+  res.json({
+    success: true,
+    data: match,
+    message: match.isShortlisted ? 'Candidate shortlisted' : 'Candidate removed from shortlist'
+  });
+});
+
+/**
+ * @route   GET /api/matches/shortlisted
+ * @desc    Get all shortlisted candidates
+ * @access  Private
+ */
+export const getShortlistedCandidates = asyncHandler(async (req, res) => {
+  const tenantId = req.user.tenantId;
+  const filters = {
+    jobId: req.query.jobId,
+    minScore: req.query.minScore ? parseInt(req.query.minScore) : undefined,
+    limit: req.query.limit ? parseInt(req.query.limit) : 100
+  };
+
+  const matches = await matchService.getShortlistedCandidates(tenantId, filters);
+
+  res.json({
+    success: true,
+    count: matches.length,
+    data: matches
+  });
+});
