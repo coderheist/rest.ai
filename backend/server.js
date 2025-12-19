@@ -5,7 +5,16 @@ import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import connectDatabase from './config/database.js';
 import authRoutes from './routes/authRoutes.js';
+import usageRoutes from './routes/usageRoutes.js';
+import jobRoutes from './routes/jobRoutes.js';
+import resumeRoutes from './routes/resumeRoutes.js';
 import { errorHandler, notFound } from './middleware/error.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Load environment variables
 dotenv.config();
@@ -51,8 +60,14 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Static file serving for uploaded files
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/usage', usageRoutes);
+app.use('/api/jobs', jobRoutes);
+app.use('/api/resumes', resumeRoutes);
 
 // 404 handler
 app.use(notFound);
