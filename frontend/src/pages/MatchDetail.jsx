@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { matchAPI } from '../services/api';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { matchAPI, interviewAPI } from '../services/api';
 
 const MatchDetail = () => {
   const { matchId } = useParams();
+  const navigate = useNavigate();
   const [match, setMatch] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [updating, setUpdating] = useState(false);
+  const [generatingKit, setGeneratingKit] = useState(false);
+  const [interviewKit, setInterviewKit] = useState(null);
 
   useEffect(() => {
     fetchMatch();
@@ -18,11 +21,42 @@ const MatchDetail = () => {
       setLoading(true);
       const response = await matchAPI.getMatch(matchId);
       setMatch(response.data);
+
+      // Check if interview kit exists
+      if (response.data.resumeId?._id) {
+        try {
+          const kitResponse = await interviewAPI.getResumeKits(response.data.resumeId._id);
+          const existingKit = kitResponse.data.find(k => k.jobId._id === response.data.jobId._id);
+          if (existingKit) {
+            setInterviewKit(existingKit);
+          }
+        } catch (err) {
+          console.log('No existing interview kit');
+        }
+      }
     } catch (err) {
       console.error('Error fetching match:', err);
       setError(err.response?.data?.error || 'Failed to load match details');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGenerateKit = async () => {
+    try {
+      setGeneratingKit(true);
+      const response = await interviewAPI.generateKit(match.jobId._id, match.resumeId._id);
+      setInterviewKit(response.data);
+      
+      // Navigate to kit after 2 seconds or if already completed
+      setTimeout(() => {
+        navigate(`/interviews/${response.data._id}`);
+      }, response.data.generationStatus === 'completed' ? 0 : 2000);
+    } catch (err) {
+      console.error('Error generating interview kit:', err);
+      alert(err.response?.data?.error || 'Failed to generate interview kit');
+    } finally {
+      setGeneratingKit(false);
     }
   };
 
@@ -293,6 +327,58 @@ const MatchDetail = () => {
           <p className="text-gray-700 leading-relaxed">{match.aiReasoning}</p>
         </div>
       )}
+
+      {/* Interview Kit Section */}
+      <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-6 mb-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-3">Interview Preparation</h3>
+        
+        {interviewKit ? (
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                  interviewKit.generationStatus === 'completed' ? 'bg-green-100 text-green-800' :
+                  interviewKit.generationStatus === 'generating' ? 'bg-yellow-100 text-yellow-800' :
+                  interviewKit.generationStatus === 'failed' ? 'bg-red-100 text-red-800' :
+                  'bg-gray-100 text-gray-800'
+                }`}>
+                  {interviewKit.generationStatus === 'completed' ? '✓ Ready' :
+                   interviewKit.generationStatus === 'generating' ? '⏳ Generating...' :
+                   interviewKit.generationStatus === 'failed' ? '✗ Failed' :
+                   'Pending'}
+                </span>
+                <span className="text-sm text-gray-600">
+                  {interviewKit.totalQuestions || 0} questions • {interviewKit.estimatedDuration || 60} minutes
+                </span>
+              </div>
+              <p className="text-sm text-gray-600">
+                Interview kit generated on {new Date(interviewKit.createdAt).toLocaleDateString()}
+              </p>
+            </div>
+            <Link
+              to={`/interviews/${interviewKit._id}`}
+              className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+            >
+              View Interview Kit
+            </Link>
+          </div>
+        ) : (
+          <div>
+            <p className="text-gray-700 mb-4">
+              Generate a personalized interview kit with technical and behavioral questions tailored to this candidate's profile.
+            </p>
+            <button
+              onClick={handleGenerateKit}
+              disabled={generatingKit}
+              className={`px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all font-medium ${
+                generatingKit ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+            >
+              {generatingKit ? '⏳ Generating Kit...' : '✨ Generate Interview Kit'}
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Status & Actions */}
       <div className="bg-white border border-gray-200 rounded-lg p-6">

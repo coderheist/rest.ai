@@ -242,6 +242,45 @@ export const resumeAPI = {
   }
 };
 
+// Interview API calls
+export const interviewAPI = {
+  // Generate interview kit for candidate
+  generateKit: async (jobId, resumeId) => {
+    const response = await api.post('/interviews/generate', { jobId, resumeId });
+    return response.data;
+  },
+
+  // Get interview kit by ID
+  getKit: async (kitId) => {
+    const response = await api.get(`/interviews/${kitId}`);
+    return response.data;
+  },
+
+  // Get interview kits for a job
+  getJobKits: async (jobId) => {
+    const response = await api.get(`/interviews/job/${jobId}`);
+    return response.data;
+  },
+
+  // Get interview kits for a resume
+  getResumeKits: async (resumeId) => {
+    const response = await api.get(`/interviews/resume/${resumeId}`);
+    return response.data;
+  },
+
+  // Get interview statistics
+  getStats: async () => {
+    const response = await api.get('/interviews/stats');
+    return response.data;
+  },
+
+  // Delete interview kit
+  deleteKit: async (kitId) => {
+    const response = await api.delete(`/interviews/${kitId}`);
+    return response.data;
+  }
+};
+
 // Match API calls
 export const matchAPI = {
   // Calculate match between job and resume

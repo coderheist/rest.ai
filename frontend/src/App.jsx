@@ -8,6 +8,7 @@ import Jobs from './pages/Jobs';
 import JobDetail from './pages/JobDetail';
 import CandidateRanking from './pages/CandidateRanking';
 import MatchDetail from './pages/MatchDetail';
+import InterviewKit from './pages/InterviewKit';
 
 function App() {
   return (
@@ -74,6 +75,15 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/interviews/:kitId"
+            element={
+              <ProtectedRoute>
+                <InterviewKit />
+              </ProtectedRoute>
+            }
+          />
+
           {/* Default Route */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Routes>
