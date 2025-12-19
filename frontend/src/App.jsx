@@ -6,6 +6,8 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Jobs from './pages/Jobs';
 import JobDetail from './pages/JobDetail';
+import CandidateRanking from './pages/CandidateRanking';
+import MatchDetail from './pages/MatchDetail';
 
 function App() {
   return (
@@ -41,7 +43,37 @@ function App() {
               </ProtectedRoute>
             }
           />
-
+          <Route
+            path="/jobs/:jobId/candidates"
+            element={
+              <ProtectedRoute>
+                <CandidateRanking />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/matches/:matchId"
+            element={
+              <ProtectedRoute>
+                <MatchDetail />
+              </ProtectedRoute>
+            }
+          />          <Route
+            path="/jobs/:jobId/candidates"
+            element={
+              <ProtectedRoute>
+                <CandidateRanking />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/matches/:matchId"
+            element={
+              <ProtectedRoute>
+                <MatchDetail />
+              </ProtectedRoute>
+            }
+          />
           {/* Default Route */}
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Routes>

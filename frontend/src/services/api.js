@@ -242,4 +242,79 @@ export const resumeAPI = {
   }
 };
 
+// Match API calls
+export const matchAPI = {
+  // Calculate match between job and resume
+  calculateMatch: async (jobId, resumeId) => {
+    const response = await api.post('/matches/calculate', { jobId, resumeId });
+    return response.data;
+  },
+
+  // Calculate matches for all resumes in a job
+  calculateJobMatches: async (jobId) => {
+    const response = await api.post(`/matches/job/${jobId}/calculate-all`);
+    return response.data;
+  },
+
+  // Get ranked candidates for a job
+  getJobMatches: async (jobId, filters = {}) => {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) params.append(key, value);
+    });
+    const response = await api.get(`/matches/job/${jobId}?${params.toString()}`);
+    return response.data;
+  },
+
+  // Get match statistics for a job
+  getJobMatchStats: async (jobId) => {
+    const response = await api.get(`/matches/job/${jobId}/stats`);
+    return response.data;
+  },
+
+  // Get matches for a resume
+  getResumeMatches: async (resumeId, filters = {}) => {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) params.append(key, value);
+    });
+    const response = await api.get(`/matches/resume/${resumeId}?${params.toString()}`);
+    return response.data;
+  },
+
+  // Get single match details
+  getMatch: async (matchId) => {
+    const response = await api.get(`/matches/${matchId}`);
+    return response.data;
+  },
+
+  // Update match status (review)
+  updateMatchStatus: async (matchId, status, notes = null) => {
+    const response = await api.patch(`/matches/${matchId}/status`, { status, notes });
+    return response.data;
+  },
+
+  // Get top matches across all jobs
+  getTopMatches: async (limit = 20) => {
+    const response = await api.get(`/matches/top?limit=${limit}`);
+    return response.data;
+  },
+
+  // Search matches with filters
+  searchMatches: async (filters = {}) => {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) params.append(key, value);
+    });
+    const response = await api.get(`/matches/search?${params.toString()}`);
+    return response.data;
+  },
+
+  // Update rankings for a job
+  updateRankings: async (jobId) => {
+    const response = await api.post(`/matches/job/${jobId}/update-rankings`);
+    return response.data;
+  }
+};
+
 export default api;

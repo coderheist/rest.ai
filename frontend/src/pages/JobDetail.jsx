@@ -213,6 +213,22 @@ const JobDetail = () => {
                 )}
               </div>
 
+              {/* Quick Actions */}
+              <div className="flex gap-3">
+                <Link
+                  to={`/jobs/${id}/candidates`}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all shadow-md hover:shadow-lg text-center font-medium"
+                >
+                  View Ranked Candidates
+                </Link>
+                <button
+                  onClick={() => {/* TODO: Implement resume upload */}}
+                  className="flex-1 px-6 py-3 border-2 border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors text-center font-medium"
+                >
+                  Upload Resume
+                </button>
+              </div>
+
               {/* Basic Info */}
               <div>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">Description</h2>

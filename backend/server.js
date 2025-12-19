@@ -8,6 +8,7 @@ import authRoutes from './routes/authRoutes.js';
 import usageRoutes from './routes/usageRoutes.js';
 import jobRoutes from './routes/jobRoutes.js';
 import resumeRoutes from './routes/resumeRoutes.js';
+import matchRoutes from './routes/matchRoutes.js';
 import { errorHandler, notFound } from './middleware/error.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -68,6 +69,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/usage', usageRoutes);
 app.use('/api/jobs', jobRoutes);
 app.use('/api/resumes', resumeRoutes);
+app.use('/api/matches', matchRoutes);
 
 // 404 handler
 app.use(notFound);
