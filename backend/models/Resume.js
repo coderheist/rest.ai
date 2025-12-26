@@ -146,6 +146,9 @@ const resumeSchema = new mongoose.Schema({
   },
 
   // Matching Score (if associated with a job)
+  // Match Score (Job Fit) - How well resume matches a specific job
+  // Calculated by: AI Service (rule-based/hybrid/LLM) when comparing to job
+  // Use case: Job matching, candidate ranking for a position
   matchScore: {
     type: Number,
     min: 0,
@@ -159,16 +162,60 @@ const resumeSchema = new mongoose.Schema({
     recommendations: [String]
   },
 
+  // ATS Score (Resume Quality) - How good/complete the resume document is
+  // Calculated by: Backend during parsing (automatic)
+  // Use case: Resume ranking, quality filtering, screening
+  atsScore: {
+    type: Number,
+    min: 0,
+    max: 100,
+    default: 0
+  },
+  atsDetails: {
+    // Enterprise ATS Scoring (JD-based when job linked)
+    keywordMatching: Number,      // 50 points - JD keyword matching
+    structureParsing: Number,     // 25 points - Resume structure
+    skillRelevance: Number,       // 15 points - Skill frequency/placement
+    titleAlignment: Number,       // 10 points - Job title matching
+    matchedKeywords: Number,      // Count of matched keywords
+    totalKeywords: Number,        // Total keywords from JD
+    
+    // Legacy Quality-Based Scoring (when no job linked)
+    formatScore: Number,          // 20 points - Contact info
+    keywordScore: Number,         // 30 points - Skills breadth
+    experienceScore: Number,      // 25 points - Work history
+    educationScore: Number,       // 15 points - Education
+    skillsScore: Number           // 10 points - Skills diversity
+  },
+
   // Status
   status: {
     type: String,
-    enum: ['new', 'reviewed', 'shortlisted', 'rejected', 'interview', 'offer', 'hired'],
+    enum: ['new', 'shortlisted', 'reviewed', 'interviewing', 'rejected', 'offer', 'hired'],
     default: 'new'
   },
   
-  // Notes and Tags
-  notes: String,
+  // Notes and Tags (Enhanced)
+  notes: [{
+    text: String,
+    addedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    addedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   tags: [String],
+  
+  // Rejection Details
+  rejectionReason: String,
+  rejectedAt: Date,
+  talentPool: {
+    type: Boolean,
+    default: false
+  },
   
   // Tracking
   viewCount: {

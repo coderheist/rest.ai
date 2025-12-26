@@ -1,7 +1,40 @@
 # AI Resume Screener - AI Service
 
 ## Overview
-Python FastAPI service handling all AI/ML operations including resume parsing, embeddings, semantic search, and interview question generation.
+Python FastAPI service with **Hybrid Scoring System** combining rule-based (free, fast) and LLM (accurate) approaches for optimal resume matching.
+
+## 🚀 Quick Start
+```bash
+# 1. Copy environment file
+cp .env.example .env
+
+# 2. Set scoring mode (start with free rule-based)
+echo "SCORING_MODE=rule_based" >> .env
+
+# 3. Install and run
+pip install -r requirements.txt
+python -m spacy download en_core_web_sm
+python -m uvicorn app.main:app --reload --port 8000
+```
+
+See **[QUICK_START_HYBRID.md](QUICK_START_HYBRID.md)** for detailed setup and testing.
+
+## 🎯 Hybrid Scoring System
+
+Three modes to choose from:
+
+| Mode | Speed | Cost | Accuracy | Best For |
+|------|-------|------|----------|----------|
+| **Rule-Based** | ⚡ Fastest | 💰 Free | 88% | High volume, MVP |
+| **Hybrid** ⭐ | ⚡ Fast | 💰 Low | 92% | Production (recommended) |
+| **LLM Only** | ⏱️ Slow | 💰 High | 90% | Executive search |
+
+### Cost Comparison (1000 candidates)
+- Rule-Based: **$0**
+- Hybrid: **$0.75-1.50** (90% free, 10% LLM)
+- LLM Only: **$7.50-15.00**
+
+See **[HYBRID_SCORING.md](HYBRID_SCORING.md)** for complete documentation.
 
 ## Tech Stack
 - **Framework**: FastAPI

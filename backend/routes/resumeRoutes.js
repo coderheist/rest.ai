@@ -12,11 +12,14 @@ import {
   getResumeStats,
   searchResumes,
   getResumesByJob,
-  bulkUpdateStatus
+  bulkUpdateStatus,
+  addNote,
+  getNotes
 } from '../controllers/resumeController.js';
 import { protect } from '../middleware/auth.js';
 import { checkResumeLimit } from '../middleware/planLimits.js';
 import { uploadSingle, uploadMultiple } from '../middleware/upload.js';
+import { validateUploadedFile, validateUploadedFiles } from '../middleware/fileValidation.js';
 
 // Protected routes
 router.use(protect); // All routes require authentication
@@ -26,9 +29,9 @@ router.get('/stats/summary', getResumeStats);
 router.get('/search', searchResumes);
 router.get('/job/:jobId', getResumesByJob);
 
-// Upload routes with limit check
-router.post('/upload', checkResumeLimit, uploadSingle, uploadResume);
-router.post('/upload/bulk', checkResumeLimit, uploadMultiple, uploadMultipleResumes);
+// Upload routes with limit check and file validation
+router.post('/upload', checkResumeLimit, uploadSingle, validateUploadedFile, uploadResume);
+router.post('/upload/bulk', checkResumeLimit, uploadMultiple, validateUploadedFiles, uploadMultipleResumes);
 
 // Bulk operations
 router.patch('/bulk/status', bulkUpdateStatus);
@@ -44,6 +47,10 @@ router.route('/:id')
 // Status and metadata updates
 router.patch('/:id/status', updateResumeStatus);
 router.patch('/:id/metadata', updateResumeMetadata);
+
+// Notes
+router.post('/:id/notes', addNote);
+router.get('/:id/notes', getNotes);
 
 // Retry parsing
 router.post('/:id/retry-parse', retryParsing);

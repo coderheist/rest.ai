@@ -10,7 +10,12 @@ import {
   getJobStats,
   getActiveJobs,
   duplicateJob,
-  bulkUpdateStatus
+  bulkUpdateStatus,
+  rankCandidates,
+  getTopCandidates,
+  rescreenCandidates,
+  getJobInsights,
+  generateJobPosts
 } from '../controllers/jobController.js';
 import { protect } from '../middleware/auth.js';
 import { checkJobLimit } from '../middleware/planLimits.js';
@@ -42,7 +47,7 @@ router.route('/')
 
 router.route('/:id')
   .get(validateMongoId('id'), getJob)
-  .put(validateUpdateJob, updateJob)
+  .put(validateMongoId('id'), validateUpdateJob, updateJob)
   .delete(validateMongoId('id'), deleteJob);
 
 // Status management
@@ -50,5 +55,12 @@ router.patch('/:id/status', validateMongoId('id'), changeJobStatus);
 
 // Duplicate job
 router.post('/:id/duplicate', validateMongoId('id'), checkJobLimit, duplicateJob);
+
+// AI-powered features
+router.post('/:id/rank-candidates', validateMongoId('id'), rankCandidates);
+router.get('/:id/top-candidates', validateMongoId('id'), getTopCandidates);
+router.post('/:id/rescreen', validateMongoId('id'), rescreenCandidates);
+router.get('/:id/insights', validateMongoId('id'), getJobInsights);
+router.post('/:id/generate-posts', validateMongoId('id'), generateJobPosts);
 
 export default router;

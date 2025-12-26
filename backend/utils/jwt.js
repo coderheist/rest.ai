@@ -7,7 +7,18 @@ import jwt from 'jsonwebtoken';
  */
 export const generateToken = (payload) => {
   return jwt.sign(payload, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE || '7d'
+    expiresIn: process.env.JWT_EXPIRE || '24h'
+  });
+};
+
+/**
+ * Generate Refresh Token
+ * @param {Object} payload - Data to encode in token
+ * @returns {String} Refresh token (longer expiry)
+ */
+export const generateRefreshToken = (payload) => {
+  return jwt.sign(payload, process.env.JWT_SECRET, {
+    expiresIn: '7d'
   });
 };
 

@@ -1,11 +1,20 @@
 import { checkLimit } from '../services/usageService.js';
 
+// Skip limit checks in development
+const SKIP_LIMITS = process.env.NODE_ENV === 'development' || process.env.SKIP_LIMITS === 'true';
+
 /**
  * Check Resume Limit Middleware
  * Prevents resume processing if limit exceeded
  */
 export const checkResumeLimit = async (req, res, next) => {
   try {
+    // Skip limits in development
+    if (SKIP_LIMITS) {
+      console.log('⚠️ Development mode: Skipping resume limit check');
+      return next();
+    }
+    
     const exceeded = await checkLimit(req.tenantId, 'resume');
     
     if (exceeded) {
@@ -30,6 +39,12 @@ export const checkResumeLimit = async (req, res, next) => {
  */
 export const checkJobLimit = async (req, res, next) => {
   try {
+    // Skip limits in development
+    if (SKIP_LIMITS) {
+      console.log('⚠️ Development mode: Skipping job limit check');
+      return next();
+    }
+    
     const exceeded = await checkLimit(req.tenantId, 'jd');
     
     if (exceeded) {
@@ -54,6 +69,12 @@ export const checkJobLimit = async (req, res, next) => {
  */
 export const checkAILimit = async (req, res, next) => {
   try {
+    // Skip limits in development
+    if (SKIP_LIMITS) {
+      console.log('⚠️ Development mode: Skipping AI limit check');
+      return next();
+    }
+    
     const exceeded = await checkLimit(req.tenantId, 'aiUsage');
     
     if (exceeded) {

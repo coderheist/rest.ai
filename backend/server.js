@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import mongoSanitize from 'express-mongo-sanitize';
 import hpp from 'hpp';
+import compression from 'compression';
 import dotenv from 'dotenv';
 import connectDatabase from './config/database.js';
 import authRoutes from './routes/authRoutes.js';
@@ -19,6 +20,7 @@ import exportRoutes from './routes/exportRoutes.js';
 import healthRoutes from './routes/healthRoutes.js';
 import { errorHandler, notFound } from './middleware/error.js';
 import { requestLogger, errorLogger } from './middleware/logging.js';
+import cacheService from './utils/cache.js';
 import logger from './utils/logger.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -35,6 +37,22 @@ const app = express();
 
 // Connect to database
 connectDatabase();
+
+// Initialize cache service
+cacheService.connect().catch(err => {
+  logger.warn('Cache service initialization failed, using memory cache only:', err.message);
+});
+
+// Compression middleware - Must be early in chain
+app.use(compression({
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    return compression.filter(req, res);
+  },
+  level: 6 // Balanced compression level
+}));
 
 // Request logging - Must be early in middleware chain
 app.use(requestLogger);
@@ -54,7 +72,7 @@ app.use(helmet({
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: process.env.FRONTEND_URL || ['http://localhost:5173', 'http://localhost:5174'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -119,6 +137,9 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Favicon handler - prevent 404 errors
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+
 // Static file serving for uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -166,14 +187,21 @@ process.on('uncaughtException', (err) => {
 });
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
-  logger.info('SIGTERM signal received: closing HTTP server');
+const gracefulShutdown = async () => {
+  logger.info('Graceful shutdown initiated');
+  
+  // Disconnect cache service
+  try {
+    await cacheService.disconnect();
+    logger.info('Cache service disconnected');
+  } catch (err) {
+    logger.error('Error disconnecting cache:', err);
+  }
+  
   process.exit(0);
-});
+};
 
-process.on('SIGINT', () => {
-  logger.info('SIGINT signal received: closing HTTP server');
-  process.exit(0);
-});
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
 
 export default app;

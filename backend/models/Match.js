@@ -58,7 +58,7 @@ const matchSchema = new mongoose.Schema({
       min: 0,
       max: 100
     },
-    requiredYears: Number,
+    requiredYears: String, // Changed to String to support range format like "0-999"
     candidateYears: Number,
     relevant: Boolean,
     details: String

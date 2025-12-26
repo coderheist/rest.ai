@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { jobAPI } from '../services/api';
 import JobCard from '../components/JobCard';
+import Layout from '../components/Layout';
 
 const Jobs = () => {
+  const location = useLocation();
   const [jobs, setJobs] = useState([]);
   const [filteredJobs, setFilteredJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [stats, setStats] = useState(null);
+  const [lastFetch, setLastFetch] = useState(Date.now());
 
   // Filters
   const [filters, setFilters] = useState({
@@ -19,10 +22,21 @@ const Jobs = () => {
     location: ''
   });
 
+  // Refresh data when component mounts or when coming back from detail page
   useEffect(() => {
     fetchJobs();
     fetchStats();
   }, []);
+
+  // Refresh data when navigating back (check if data is stale)
+  useEffect(() => {
+    const timeSinceLastFetch = Date.now() - lastFetch;
+    // Only refresh if more than 3 seconds have passed
+    if (timeSinceLastFetch > 3000) {
+      fetchJobs();
+      fetchStats();
+    }
+  }, [location.pathname]);
 
   useEffect(() => {
     applyFilters();
@@ -34,6 +48,7 @@ const Jobs = () => {
       setError('');
       const response = await jobAPI.getJobs();
       setJobs(response.data || []);
+      setLastFetch(Date.now());
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to fetch jobs');
       console.error('Error fetching jobs:', err);
@@ -138,8 +153,7 @@ const Jobs = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <Layout>
         {/* Header */}
         <div className="mb-8">
           <div className="flex justify-between items-center mb-4">
@@ -333,8 +347,7 @@ const Jobs = () => {
             </div>
           </>
         )}
-      </div>
-    </div>
+    </Layout>
   );
 };
 

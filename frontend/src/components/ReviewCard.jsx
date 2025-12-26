@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types';
-import { Star, User, Calendar, ThumbsUp, ThumbsDown, Award } from 'lucide-react';
+import { Star, User, Calendar, ThumbsUp, ThumbsDown, Award, Briefcase } from 'lucide-react';
 
-const ReviewCard = ({ review, onEdit, onDelete, canEdit = false }) => {
+const ReviewCard = ({ review, onEdit, onDelete, canEdit = false, showCandidateName = false }) => {
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -60,6 +60,18 @@ const ReviewCard = ({ review, onEdit, onDelete, canEdit = false }) => {
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+      {/* Candidate Name (if viewing from job level) */}
+      {showCandidateName && review.matchId?.resumeId?.personalInfo?.fullName && (
+        <div className="mb-3 pb-3 border-b border-gray-200">
+          <div className="flex items-center space-x-2 text-gray-700">
+            <Briefcase className="w-5 h-5 text-blue-500" />
+            <span className="font-semibold text-lg">
+              {review.matchId.resumeId.personalInfo.fullName}
+            </span>
+          </div>
+        </div>
+      )}
+      
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
@@ -203,6 +215,13 @@ ReviewCard.propTypes = {
     reviewerId: PropTypes.shape({
       name: PropTypes.string
     }),
+    matchId: PropTypes.shape({
+      resumeId: PropTypes.shape({
+        personalInfo: PropTypes.shape({
+          fullName: PropTypes.string
+        })
+      })
+    }),
     rating: PropTypes.number.isRequired,
     feedback: PropTypes.string.isRequired,
     stage: PropTypes.string.isRequired,
@@ -218,7 +237,8 @@ ReviewCard.propTypes = {
   }).isRequired,
   onEdit: PropTypes.func,
   onDelete: PropTypes.func,
-  canEdit: PropTypes.bool
+  canEdit: PropTypes.bool,
+  showCandidateName: PropTypes.bool
 };
 
 export default ReviewCard;

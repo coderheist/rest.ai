@@ -1,7 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { jobAPI } from '../services/api';
+import { jobAPI, exportAPI, reviewAPI } from '../services/api';
 import JobForm from '../components/JobForm';
+import Layout from '../components/Layout';
+import ResumeUpload from '../components/ResumeUpload';
+import CandidateRanking from '../components/CandidateRanking';
+import JobInsights from '../components/JobInsights';
+import ReviewCard from '../components/ReviewCard';
+import { FileDown, FileSpreadsheet, FileText, Star, ThumbsUp, ThumbsDown, AlertCircle, Upload } from 'lucide-react';
 
 const JobDetail = () => {
   const { id } = useParams();
@@ -13,12 +19,117 @@ const JobDetail = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [isEditing, setIsEditing] = useState(isNew);
+  
+  // AI features state
+  const [topCandidates, setTopCandidates] = useState([]);
+  const [jobInsights, setJobInsights] = useState(null);
+  const [loadingCandidates, setLoadingCandidates] = useState(false);
+  const [loadingInsights, setLoadingInsights] = useState(false);
+  const [rescreening, setRescreening] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview'); // overview, candidates, insights, reviews
+  const [exporting, setExporting] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  
+  // Reviews state
+  const [reviews, setReviews] = useState([]);
+  const [reviewStats, setReviewStats] = useState(null);
+  const [loadingReviews, setLoadingReviews] = useState(false);
 
   useEffect(() => {
     if (!isNew) {
       fetchJob();
+      fetchTopCandidates();
+      fetchJobInsights();
+      fetchJobReviews();
     }
   }, [id]);
+
+  const fetchTopCandidates = async () => {
+    try {
+      setLoadingCandidates(true);
+      const response = await jobAPI.getTopCandidates(id, 10);
+      setTopCandidates(response.data || []);
+    } catch (err) {
+      console.error('Error fetching top candidates:', err);
+      // Don't show error, just leave empty
+    } finally {
+      setLoadingCandidates(false);
+    }
+  };
+
+  const fetchJobInsights = async () => {
+    try {
+      setLoadingInsights(true);
+      const response = await jobAPI.getJobInsights(id);
+      setJobInsights(response.data || null);
+    } catch (err) {
+      console.error('Error fetching job insights:', err);
+      // Don't show error, just leave empty
+    } finally {
+      setLoadingInsights(false);
+    }
+  };
+
+  const fetchJobReviews = async () => {
+    try {
+      setLoadingReviews(true);
+      const [reviewsRes, distRes] = await Promise.all([
+        reviewAPI.getByJob(id),
+        reviewAPI.getRecommendationDistribution(id)
+      ]);
+      setReviews(reviewsRes.data?.reviews || reviewsRes.data || []);
+      setReviewStats(distRes.data || null);
+    } catch (err) {
+      console.error('Error fetching reviews:', err);
+      // Don't show error, just leave empty
+      setReviews([]);
+    } finally {
+      setLoadingReviews(false);
+    }
+  };
+
+  const handleRescreenCandidates = async () => {
+    if (!window.confirm('This will re-evaluate all candidates for this job. Continue?')) {
+      return;
+    }
+
+    try {
+      setRescreening(true);
+      await jobAPI.rescreenCandidates(id);
+      // Refresh data after rescreening
+      await fetchTopCandidates();
+      await fetchJobInsights();
+      alert('Candidates have been rescreened successfully!');
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to rescreen candidates');
+    } finally {
+      setRescreening(false);
+    }
+  };
+
+  const handleResumeUpload = () => {
+    setShowUploadModal(true);
+  };
+
+  const handleUploadComplete = () => {
+    setShowUploadModal(false);
+    // Refresh data after upload
+    fetchTopCandidates();
+    fetchJobInsights();
+    alert('Resume(s) uploaded successfully!');
+  };
+
+  const handleViewCandidateDetails = (candidate) => {
+    if (candidate._id) {
+      navigate(`/matches/${candidate._id}`);
+    }
+  };
+
+  const handleGenerateInterview = (candidate) => {
+    if (candidate.resumeId?._id) {
+      navigate(`/interview-kit/new?jobId=${id}&resumeId=${candidate.resumeId._id}`);
+    }
+  };
 
   const fetchJob = async () => {
     try {
@@ -48,8 +159,18 @@ const JobDetail = () => {
         setIsEditing(false);
       }
     } catch (err) {
-      setError(err.response?.data?.error || `Failed to ${isNew ? 'create' : 'update'} job`);
       console.error('Error saving job:', err);
+      console.error('Error response:', err.response?.data);
+      
+      // Handle validation errors
+      if (err.response?.data?.errors) {
+        const validationErrors = err.response.data.errors
+          .map(e => `${e.field}: ${e.message}`)
+          .join(', ');
+        setError(`Validation failed: ${validationErrors}`);
+      } else {
+        setError(err.response?.data?.error || `Failed to ${isNew ? 'create' : 'update'} job`);
+      }
     } finally {
       setSaving(false);
     }
@@ -94,7 +215,33 @@ const JobDetail = () => {
       setError(err.response?.data?.error || 'Failed to duplicate job');
     }
   };
+const handleExportCSV = async () => {
+    try {
+      setExporting(true);
+      const response = await exportAPI.exportCandidatesCSV(id);
+      const filename = `${job.title.replace(/\s+/g, '_')}_candidates_${new Date().toISOString().split('T')[0]}.csv`;
+      exportAPI.downloadFile(response.data, filename);
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to export CSV');
+    } finally {
+      setExporting(false);
+    }
+  };
 
+  const handleExportJobSummary = async () => {
+    try {
+      setExporting(true);
+      const response = await exportAPI.exportJobSummaryPDF(id);
+      const filename = `${job.title.replace(/\s+/g, '_')}_summary_${new Date().toISOString().split('T')[0]}.pdf`;
+      exportAPI.downloadFile(response.data, filename);
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to export summary');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -102,10 +249,45 @@ const JobDetail = () => {
       </div>
     );
   }
+{/* Export Dropdown */}
+                <div className="relative group">
+                  <button
+                    disabled={exporting}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-400 flex items-center gap-2"
+                  >
+                    <FileDown className="w-4 h-4" />
+                    {exporting ? 'Exporting...' : 'Export'}
+                  </button>
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+                    <button
+                      onClick={handleExportCSV}
+                      disabled={exporting}
+                      className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 border-b disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <FileSpreadsheet className="w-5 h-5 text-green-600" />
+                      <div>
+                        <div className="font-medium text-gray-900">Export to CSV</div>
+                        <div className="text-xs text-gray-500">All candidates data</div>
+                      </div>
+                    </button>
+                    <button
+                      onClick={handleExportJobSummary}
+                      disabled={exporting}
+                      className="w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <FileText className="w-5 h-5 text-red-600" />
+                      <div>
+                        <div className="font-medium text-gray-900">Job Summary PDF</div>
+                        <div className="text-xs text-gray-500">Complete report</div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
 
+                
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <Layout>
+      <div className="max-w-5xl mx-auto">
         {/* Header */}
         <div className="mb-6">
           <Link to="/jobs" className="text-blue-600 hover:text-blue-800 mb-4 inline-block">
@@ -222,15 +404,97 @@ const JobDetail = () => {
                   View Ranked Candidates
                 </Link>
                 <button
-                  onClick={() => {/* TODO: Implement resume upload */}}
+                  onClick={handleResumeUpload}
                   className="flex-1 px-6 py-3 border-2 border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors text-center font-medium"
                 >
                   Upload Resume
                 </button>
+                <button
+                  onClick={handleRescreenCandidates}
+                  disabled={rescreening}
+                  className="px-6 py-3 border-2 border-green-600 text-green-600 rounded-lg hover:bg-green-50 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {rescreening ? 'Rescreening...' : 'Rescreen All'}
+                </button>
               </div>
 
-              {/* Basic Info */}
-              <div>
+              {/* Tabs Navigation - Premium Design */}
+              <div className="border-b-2 border-gray-200 mb-6">
+                <nav className="flex space-x-1 overflow-x-auto">
+                  <button
+                    onClick={() => setActiveTab('overview')}
+                    className={`relative py-4 px-6 font-semibold text-sm transition-all duration-300 whitespace-nowrap ${
+                      activeTab === 'overview'
+                        ? 'text-blue-600'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <span className="relative z-10">Overview</span>
+                    {activeTab === 'overview' && (
+                      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-t-full animate-slideUp"></div>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('candidates')}
+                    className={`relative py-4 px-6 font-semibold text-sm transition-all duration-300 whitespace-nowrap ${
+                      activeTab === 'candidates'
+                        ? 'text-blue-600'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <span className="relative z-10 flex items-center space-x-2">
+                      <span>Candidates</span>
+                      {topCandidates.length > 0 && (
+                        <span className="px-2.5 py-0.5 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full text-xs font-bold shadow-md">
+                          {topCandidates.length}
+                        </span>
+                      )}
+                    </span>
+                    {activeTab === 'candidates' && (
+                      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-t-full animate-slideUp"></div>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('insights')}
+                    className={`relative py-4 px-6 font-semibold text-sm transition-all duration-300 whitespace-nowrap ${
+                      activeTab === 'insights'
+                        ? 'text-blue-600'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <span className="relative z-10">AI Insights</span>
+                    {activeTab === 'insights' && (
+                      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-t-full animate-slideUp"></div>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('reviews')}
+                    className={`relative py-4 px-6 font-semibold text-sm transition-all duration-300 whitespace-nowrap ${
+                      activeTab === 'reviews'
+                        ? 'text-blue-600'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    <span className="relative z-10 flex items-center space-x-2">
+                      <span>Reviews</span>
+                      {reviews.length > 0 && (
+                        <span className="px-2.5 py-0.5 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full text-xs font-bold shadow-md">
+                          {reviews.length}
+                        </span>
+                      )}
+                    </span>
+                    {activeTab === 'reviews' && (
+                      <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-t-full animate-slideUp"></div>
+                    )}
+                  </button>
+                </nav>
+              </div>
+
+              {/* Tab Content */}
+              {activeTab === 'overview' && (
+                <div className="space-y-6">
+                  {/* Basic Info */}
+                  <div>
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">Description</h2>
                 <p className="text-gray-700 whitespace-pre-wrap">{job.description}</p>
               </div>
@@ -360,11 +624,155 @@ const JobDetail = () => {
                   </p>
                 </div>
               )}
+                </div>
+              )}
+
+              {/* Candidates Tab */}
+              {activeTab === 'candidates' && (
+                <div className="space-y-6">
+                  {/* Upload Section - Premium Design */}
+                  <div className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 border-2 border-dashed border-blue-300 rounded-2xl p-8 hover:border-blue-500 transition-all duration-300">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <div className="p-4 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl shadow-lg">
+                          <Upload className="w-8 h-8 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-bold text-gray-900 mb-1">Upload Candidates</h3>
+                          <p className="text-gray-600">Add resumes directly to this job position</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleResumeUpload}
+                        className="px-8 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl font-semibold transition-all duration-300 flex items-center space-x-2 shadow-lg hover:shadow-xl transform hover:scale-105"
+                      >
+                        <Upload className="w-5 h-5" />
+                        <span>Upload Resume</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Candidate Ranking Component */}
+                  <CandidateRanking
+                    candidates={topCandidates}
+                    loading={loadingCandidates}
+                    onViewDetails={handleViewCandidateDetails}
+                    onGenerateInterview={handleGenerateInterview}
+                  />
+                </div>
+              )}
+
+              {/* Insights Tab */}
+              {activeTab === 'insights' && (
+                <div>
+                  <JobInsights
+                    insights={jobInsights}
+                    loading={loadingInsights}
+                  />
+                </div>
+              )}
+
+              {/* Reviews Tab */}
+              {activeTab === 'reviews' && (
+                <div>
+                  {loadingReviews ? (
+                    <div className="flex justify-center items-center py-12">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                    </div>
+                  ) : reviews.length === 0 ? (
+                    <div className="text-center py-12">
+                      <AlertCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">No Reviews Yet</h3>
+                      <p className="text-gray-600">
+                        Reviews will appear here once candidates have been evaluated.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {/* Review Statistics */}
+                      {reviewStats && (
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                          <div className="bg-white border border-gray-200 rounded-lg p-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium text-gray-600">Total Reviews</span>
+                              <Star className="w-5 h-5 text-yellow-500" />
+                            </div>
+                            <div className="text-2xl font-bold text-gray-900">
+                              {reviewStats.totalReviews || 0}
+                            </div>
+                          </div>
+
+                          <div className="bg-white border border-gray-200 rounded-lg p-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium text-gray-600">Strong Yes</span>
+                              <ThumbsUp className="w-5 h-5 text-green-500" />
+                            </div>
+                            <div className="text-2xl font-bold text-green-600">
+                              {reviewStats.recommendations?.['strong-yes'] || 0}
+                            </div>
+                          </div>
+
+                          <div className="bg-white border border-gray-200 rounded-lg p-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium text-gray-600">Yes</span>
+                              <ThumbsUp className="w-5 h-5 text-blue-500" />
+                            </div>
+                            <div className="text-2xl font-bold text-blue-600">
+                              {reviewStats.recommendations?.yes || 0}
+                            </div>
+                          </div>
+
+                          <div className="bg-white border border-gray-200 rounded-lg p-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium text-gray-600">No</span>
+                              <ThumbsDown className="w-5 h-5 text-red-500" />
+                            </div>
+                            <div className="text-2xl font-bold text-red-600">
+                              {(reviewStats.recommendations?.no || 0) + (reviewStats.recommendations?.['strong-no'] || 0)}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Reviews List */}
+                      <div className="space-y-4">
+                        {reviews.map((review) => (
+                          <ReviewCard 
+                            key={review._id} 
+                            review={review}
+                            showCandidateName={true}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )
         )}
       </div>
-    </div>
+
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-gray-900">Upload Resume for {job?.title}</h2>
+              <button
+                onClick={() => setShowUploadModal(false)}
+                className="text-gray-400 hover:text-gray-600 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+            <div className="p-6">
+              <ResumeUpload jobId={id} onUploadComplete={handleUploadComplete} />
+            </div>
+          </div>
+        </div>
+      )}
+    </Layout>
   );
 };
 

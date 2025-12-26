@@ -3,12 +3,12 @@ import Job from '../models/Job.js';
 import Resume from '../models/Resume.js';
 import Match from '../models/Match.js';
 import { incrementUsage } from './usageService.js';
+import aiServiceClient from './aiServiceClient.js';
 import axios from 'axios';
+import logger from '../utils/logger.js';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const USE_GEMINI = GEMINI_API_KEY && GEMINI_API_KEY !== 'your-gemini-api-key-here';
-const USE_OPENAI = !USE_GEMINI && OPENAI_API_KEY && OPENAI_API_KEY !== 'your-openai-api-key-here';
 
 class InterviewService {
   /**
@@ -42,9 +42,9 @@ class InterviewService {
       });
       await kit.save();
 
-      // Generate questions asynchronously
-      this.generateQuestionsAsync(kit._id, job, resume, match).catch(err => {
-        console.error('Error generating questions:', err);
+      // Generate questions asynchronously using AI service
+      this.generateQuestionsWithAIService(kit._id, job, resume, match, tenantId).catch(err => {
+        logger.error('Error generating questions:', err);
       });
 
       return kit;
@@ -60,7 +60,7 @@ class InterviewService {
     try {
       const kit = await InterviewKit.findById(kitId);
       
-      if (!USE_GEMINI && !USE_OPENAI) {
+      if (!USE_GEMINI) {
         // Use template-based generation
         const questions = this.generateTemplateQuestions(job, resume, match);
         kit.technicalQuestions = questions.technical;
@@ -80,15 +80,9 @@ class InterviewService {
       // Build prompt
       const prompt = this.buildInterviewPrompt(job, resume, match);
 
-      // Call LLM
-      let response;
-      if (USE_GEMINI) {
-        response = await this.callGemini(prompt);
-        kit.llmModel = 'gemini-1.5-flash';
-      } else if (USE_OPENAI) {
-        response = await this.callOpenAI(prompt);
-        kit.llmModel = 'gpt-3.5-turbo';
-      }
+      // Call Gemini LLM
+      const response = await this.callGemini(prompt);
+      kit.llmModel = 'gemini-1.5-flash';
 
       // Parse response
       const questions = this.parseQuestionsResponse(response);
@@ -369,39 +363,6 @@ Guidelines:
   }
 
   /**
-   * Call OpenAI API
-   */
-  async callOpenAI(prompt) {
-    const response = await axios.post(
-      'https://api.openai.com/v1/chat/completions',
-      {
-        model: 'gpt-3.5-turbo-16k',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an expert technical recruiter. Respond only with valid JSON, no markdown.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        temperature: 0.4,
-        max_tokens: 4096
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${OPENAI_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 45000
-      }
-    );
-
-    return response.data.choices[0].message.content.trim();
-  }
-
-  /**
    * Parse LLM response
    */
   parseQuestionsResponse(responseText) {
@@ -442,6 +403,21 @@ Guidelines:
       return kit;
     } catch (error) {
       throw new Error(`Failed to get interview kit: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get all interview kits
+   */
+  async getAllKits(tenantId) {
+    try {
+      return await InterviewKit.find({ tenantId })
+        .populate('jobId', 'title company')
+        .populate('resumeId', 'fileName personalInfo')
+        .populate('matchId', 'overallScore recommendation')
+        .sort({ createdAt: -1 });
+    } catch (error) {
+      throw new Error(`Failed to get interview kits: ${error.message}`);
     }
   }
 
@@ -491,6 +467,90 @@ Guidelines:
       return true;
     } catch (error) {
       throw new Error(`Failed to delete interview kit: ${error.message}`);
+    }
+  }
+
+  /**
+   * Generate questions using AI Service (NEW - preferred method)
+   */
+  async generateQuestionsWithAIService(kitId, job, resume, match, tenantId) {
+    try {
+      const kit = await InterviewKit.findById(kitId);
+      
+      // Build job description
+      const jobDescription = `${job.title}\n\n${job.description}\n\nRequirements:\n${job.requirements.join('\n')}\n\nResponsibilities:\n${job.responsibilities.join('\n')}`;
+      
+      // Build resume text
+      const resumeText = resume.rawText || `${resume.personalInfo?.fullName}\n${resume.personalInfo?.summary}\n\nSkills: ${Object.values(resume.skills || {}).flat().join(', ')}`;
+      
+      // Call AI service
+      const response = await aiServiceClient.generateInterviewKit(
+        jobDescription,
+        resumeText,
+        job.title,
+        resume.personalInfo?.fullName || 'Candidate',
+        10 // Number of questions
+      );
+
+      if (!response.success || !response.interview_kit) {
+        throw new Error('Failed to generate interview kit');
+      }
+
+      const aiKit = response.interview_kit;
+
+      // Map questions by category
+      const questionsByCategory = {
+        technical: [],
+        behavioral: [],
+        situational: []
+      };
+
+      aiKit.questions.forEach(q => {
+        const mappedQuestion = {
+          question: q.question,
+          category: q.category,
+          difficulty: q.difficulty,
+          expectedAnswer: q.expected_answer,
+          evaluationCriteria: q.evaluation_criteria || [],
+          followUpQuestions: q.follow_up_questions || []
+        };
+
+        if (q.category === 'technical') {
+          questionsByCategory.technical.push(mappedQuestion);
+        } else if (q.category === 'behavioral') {
+          questionsByCategory.behavioral.push(mappedQuestion);
+        } else if (q.category === 'situational') {
+          questionsByCategory.situational.push(mappedQuestion);
+        }
+      });
+
+      // Update kit
+      kit.technicalQuestions = questionsByCategory.technical;
+      kit.behavioralQuestions = questionsByCategory.behavioral;
+      kit.situationalQuestions = questionsByCategory.situational;
+      kit.focusAreas = aiKit.key_areas_to_assess || [];
+      kit.recommendedDuration = aiKit.recommended_duration || 60;
+      kit.interviewerNotes = aiKit.notes || '';
+      kit.generationStatus = 'completed';
+      kit.llmModel = 'ai-service';
+      
+      await kit.save();
+
+      // Track usage
+      await incrementUsage(tenantId, 'llmCalls', 1);
+      await incrementUsage(tenantId, 'interviewKitsGenerated', 1);
+
+      logger.info(`Successfully generated interview kit ${kitId} using AI service`);
+
+    } catch (error) {
+      logger.error(`Error generating questions with AI service for kit ${kitId}:`, error);
+      const kit = await InterviewKit.findById(kitId);
+      if (kit) {
+        kit.generationStatus = 'failed';
+        kit.generationError = error.message;
+        await kit.save();
+      }
+      throw error;
     }
   }
 }

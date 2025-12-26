@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { matchAPI, interviewAPI, reviewAPI, exportAPI } from '../services/api';
-import { Star, Users, MessageSquare, FileDown } from 'lucide-react';
+import Layout from '../components/Layout';
+import { Star, Users, MessageSquare, FileDown, FileText } from 'lucide-react';
 import ReviewCard from '../components/ReviewCard';
 import ReviewForm from '../components/ReviewForm';
+import MatchExplanation from '../components/MatchExplanation';
 
 const MatchDetail = () => {
   const { matchId } = useParams();
@@ -172,7 +174,7 @@ const MatchDetail = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
+    <Layout>
       {/* Header */}
       <div className="mb-6">
         <Link to={`/jobs/${match.jobId._id}/candidates`} className="text-sm text-blue-600 hover:underline mb-2 inline-block">
@@ -280,92 +282,8 @@ const MatchDetail = () => {
         </div>
       </div>
 
-      {/* Component Scores */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Score Breakdown</h3>
-        
-        {/* Skills Match */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="font-medium text-gray-900">Skills Match</h4>
-            <span className={`text-2xl font-bold ${getScoreColor(match.skillMatch?.score || 0)}`}>
-              {match.skillMatch?.score || 0}%
-            </span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
-            <div
-              className="bg-blue-600 h-2 rounded-full"
-              style={{ width: `${match.skillMatch?.score || 0}%` }}
-            ></div>
-          </div>
-          
-          {/* Matched Skills */}
-          {match.skillMatch?.matchedSkills && match.skillMatch.matchedSkills.length > 0 && (
-            <div className="mb-3">
-              <div className="text-sm text-gray-600 mb-2">Matched Skills ({match.skillMatch.matchedSkills.length})</div>
-              <div className="flex flex-wrap gap-2">
-                {match.skillMatch.matchedSkills.map((skill, index) => (
-                  <span key={index} className="px-3 py-1 bg-green-50 text-green-700 rounded-full text-sm">
-                    {skill.skill}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Missing Skills */}
-          {match.skillMatch?.missingSkills && match.skillMatch.missingSkills.length > 0 && (
-            <div>
-              <div className="text-sm text-gray-600 mb-2">Missing Skills ({match.skillMatch.missingSkills.length})</div>
-              <div className="flex flex-wrap gap-2">
-                {match.skillMatch.missingSkills.map((skill, index) => (
-                  <span key={index} className="px-3 py-1 bg-red-50 text-red-700 rounded-full text-sm">
-                    {skill}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Experience Match */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="font-medium text-gray-900">Experience Match</h4>
-            <span className={`text-2xl font-bold ${getScoreColor(match.experienceMatch?.score || 0)}`}>
-              {match.experienceMatch?.score || 0}%
-            </span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
-            <div
-              className="bg-blue-600 h-2 rounded-full"
-              style={{ width: `${match.experienceMatch?.score || 0}%` }}
-            ></div>
-          </div>
-          {match.experienceMatch?.details && (
-            <p className="text-sm text-gray-600">{match.experienceMatch.details}</p>
-          )}
-        </div>
-
-        {/* Education Match */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="font-medium text-gray-900">Education Match</h4>
-            <span className={`text-2xl font-bold ${getScoreColor(match.educationMatch?.score || 0)}`}>
-              {match.educationMatch?.score || 0}%
-            </span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
-            <div
-              className="bg-blue-600 h-2 rounded-full"
-              style={{ width: `${match.educationMatch?.score || 0}%` }}
-            ></div>
-          </div>
-          {match.educationMatch?.details && (
-            <p className="text-sm text-gray-600">{match.educationMatch.details}</p>
-          )}
-        </div>
-      </div>
+      {/* AI Match Explanation */}
+      <MatchExplanation match={match} />
 
       {/* Strengths & Concerns */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -622,7 +540,7 @@ const MatchDetail = () => {
           </p>
         )}
       </div>
-    </div>
+    </Layout>
   );
 };
 

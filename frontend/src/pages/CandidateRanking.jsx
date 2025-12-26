@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { matchAPI, jobAPI, exportAPI } from '../services/api';
 import MatchCard from '../components/MatchCard';
+import Layout from '../components/Layout';
 import { FileDown, FileSpreadsheet, FileText } from 'lucide-react';
 
 const CandidateRanking = () => {
@@ -98,7 +99,7 @@ const CandidateRanking = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
+    <Layout>
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
@@ -262,7 +263,7 @@ const CandidateRanking = () => {
           </div>
         </div>
       )}
-    </div>
+    </Layout>
   );
 };
 

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { interviewAPI } from '../services/api';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { interviewAPI, jobAPI, resumeAPI } from '../services/api';
+import Layout from '../components/Layout';
+import InterviewKitDisplay from '../components/InterviewKitDisplay';
 
 const InterviewKit = () => {
   const { kitId } = useParams();
@@ -65,7 +67,7 @@ const InterviewKit = () => {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
+    <Layout>
       {/* Header */}
       <div className="mb-6 print:mb-4">
         <div className="flex justify-between items-start mb-4 print:hidden">
@@ -399,7 +401,7 @@ const InterviewKit = () => {
         <p>Generated on {new Date(kit.createdAt).toLocaleString()}</p>
         <p>Model: {kit.llmModel}</p>
       </div>
-    </div>
+    </Layout>
   );
 };
 

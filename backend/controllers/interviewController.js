@@ -47,6 +47,23 @@ export const getInterviewKit = asyncHandler(async (req, res) => {
 });
 
 /**
+ * @route   GET /api/interviews
+ * @desc    Get all interview kits
+ * @access  Private
+ */
+export const getAllInterviewKits = asyncHandler(async (req, res) => {
+  const tenantId = req.user.tenantId;
+
+  const kits = await interviewService.getAllKits(tenantId);
+
+  res.json({
+    success: true,
+    count: kits.length,
+    data: kits
+  });
+});
+
+/**
  * @route   GET /api/interviews/job/:jobId
  * @desc    Get all interview kits for a job
  * @access  Private

@@ -16,6 +16,8 @@ import {
   unassignInterviewer
 } from '../controllers/matchController.js';
 import { protect } from '../middleware/auth.js';
+import { validateTenantOwnership } from '../middleware/tenantValidation.js';
+import Match from '../models/Match.js';
 
 const router = express.Router();
 
@@ -34,10 +36,10 @@ router.get('/shortlisted', getShortlistedCandidates);
 router.get('/job/:jobId', getJobMatches);
 router.get('/job/:jobId/stats', getJobMatchStats);
 router.get('/resume/:resumeId', getResumeMatches);
-router.get('/:matchId', getMatch);
+router.get('/:matchId', validateTenantOwnership(Match, 'matchId'), getMatch);
 
 // Update match
-router.patch('/:matchId/status', updateMatchStatus);
+router.patch('/:matchId/status', validateTenantOwnership(Match, 'matchId'), updateMatchStatus);
 router.patch('/:matchId/shortlist', toggleShortlist);
 
 // Interviewer assignment

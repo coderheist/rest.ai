@@ -2,6 +2,7 @@ import express from 'express';
 import {
   generateInterviewKit,
   getInterviewKit,
+  getAllInterviewKits,
   getJobInterviewKits,
   getResumeInterviewKits,
   getInterviewStats,
@@ -19,6 +20,9 @@ router.post('/generate', generateInterviewKit);
 
 // Get statistics
 router.get('/stats', getInterviewStats);
+
+// Get all interview kits
+router.get('/', getAllInterviewKits);
 
 // Get interview kits
 router.get('/job/:jobId', getJobInterviewKits);

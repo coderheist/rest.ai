@@ -2,30 +2,30 @@
 fastapi==0.108.0
 uvicorn[standard]==0.25.0
 python-multipart==0.0.6
+pydantic-settings==2.1.0
 
 # Resume Parsing
 pdfplumber==0.10.3
-PyMuPDF==1.23.8
+PyMuPDF>=1.24.0
 python-docx==1.1.0
 pypdf2==3.0.1
 
 # NLP & AI
-sentence-transformers==2.2.2
-transformers==4.36.0
-torch==2.1.1
-spacy==3.7.2
+sentence-transformers>=2.2.2
+transformers>=4.36.0
+torch>=2.6.0
+spacy>=3.7.2
 
 # Vector Storage
-faiss-cpu==1.7.4
-chromadb==0.4.18
+faiss-cpu>=1.9.0
+chromadb>=0.4.18
 
 # LLM Integration
 google-generativeai==0.3.1
-openai==1.6.0
 
 # Data Processing
-numpy==1.24.3
-pandas==2.1.4
+numpy>=1.24.3
+pandas>=2.1.4
 
 # Utilities
 python-dotenv==1.0.0

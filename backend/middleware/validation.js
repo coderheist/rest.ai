@@ -68,32 +68,49 @@ export const validateCreateJob = [
     .trim()
     .notEmpty().withMessage('Job description is required')
     .isLength({ min: 10, max: 10000 }).withMessage('Description must be between 10 and 10000 characters'),
-  body('requiredSkills')
-    .isArray({ min: 1 }).withMessage('At least one required skill must be provided')
-    .custom((skills) => skills.every(skill => typeof skill === 'string' && skill.trim().length > 0))
-    .withMessage('All skills must be non-empty strings'),
-  body('requiredExperience')
+  body('skills.required')
     .optional()
-    .isInt({ min: 0, max: 50 }).withMessage('Experience must be between 0 and 50 years'),
+    .isArray().withMessage('Required skills must be an array')
+    .custom((skills) => !skills || skills.every(skill => typeof skill === 'string' && skill.trim().length > 0))
+    .withMessage('All skills must be non-empty strings'),
+  body('skills.preferred')
+    .optional()
+    .isArray().withMessage('Preferred skills must be an array'),
+  body('experienceYears.min')
+    .optional()
+    .isInt({ min: 0, max: 50 }).withMessage('Minimum experience must be between 0 and 50 years'),
+  body('experienceYears.max')
+    .optional()
+    .custom((value, { req }) => {
+      if (value === null || value === undefined) return true;
+      const intValue = parseInt(value);
+      if (isNaN(intValue)) return false;
+      if (intValue < 0 || intValue > 50) return false;
+      if (req.body.experienceYears?.min && intValue < req.body.experienceYears.min) return false;
+      return true;
+    })
+    .withMessage('Maximum experience must be between min and 50 years'),
   body('department')
     .optional()
     .trim()
     .isLength({ max: 100 }).withMessage('Department must be less than 100 characters'),
-  body('location')
+  body('location.type')
     .optional()
-    .trim()
-    .isLength({ max: 200 }).withMessage('Location must be less than 200 characters'),
+    .isIn(['remote', 'onsite', 'hybrid']).withMessage('Invalid location type'),
   body('employmentType')
     .optional()
-    .isIn(['full-time', 'part-time', 'contract', 'internship']).withMessage('Invalid employment type'),
+    .isIn(['full-time', 'part-time', 'contract', 'internship', 'temporary']).withMessage('Invalid employment type'),
+  body('experienceLevel')
+    .optional()
+    .isIn(['entry', 'mid', 'senior', 'lead', 'executive']).withMessage('Invalid experience level'),
   body('status')
     .optional()
-    .isIn(['active', 'closed', 'draft']).withMessage('Invalid status'),
+    .isIn(['active', 'closed', 'draft', 'paused', 'archived']).withMessage('Invalid status'),
   handleValidationErrors
 ];
 
 export const validateUpdateJob = [
-  param('jobId').isMongoId().withMessage('Invalid job ID'),
+  param('id').isMongoId().withMessage('Invalid job ID'),
   body('title')
     .optional()
     .trim()
@@ -102,12 +119,26 @@ export const validateUpdateJob = [
     .optional()
     .trim()
     .isLength({ min: 10, max: 10000 }).withMessage('Description must be between 10 and 10000 characters'),
-  body('requiredSkills')
+  body('skills.required')
     .optional()
-    .isArray({ min: 1 }).withMessage('At least one required skill must be provided'),
-  body('requiredExperience')
+    .isArray().withMessage('Required skills must be an array'),
+  body('skills.preferred')
     .optional()
-    .isInt({ min: 0, max: 50 }).withMessage('Experience must be between 0 and 50 years'),
+    .isArray().withMessage('Preferred skills must be an array'),
+  body('experienceYears.min')
+    .optional()
+    .isInt({ min: 0, max: 50 }).withMessage('Minimum experience must be between 0 and 50 years'),
+  body('experienceYears.max')
+    .optional()
+    .custom((value, { req }) => {
+      if (value === null || value === undefined) return true;
+      const intValue = parseInt(value);
+      if (isNaN(intValue)) return false;
+      if (intValue < 0 || intValue > 50) return false;
+      if (req.body.experienceYears?.min && intValue < req.body.experienceYears.min) return false;
+      return true;
+    })
+    .withMessage('Maximum experience must be between min and 50 years'),
   handleValidationErrors
 ];
 
@@ -215,7 +246,7 @@ export const validateGenerateKit = [
 export const validateJobQuery = [
   query('status')
     .optional()
-    .isIn(['active', 'closed', 'draft']).withMessage('Invalid status'),
+    .isIn(['active', 'closed', 'draft', 'paused', 'archived']).withMessage('Invalid status'),
   query('limit')
     .optional()
     .isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),

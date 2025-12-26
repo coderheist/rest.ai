@@ -1,6 +1,7 @@
 import User from '../models/User.js';
 import Tenant from '../models/Tenant.js';
-import { generateToken } from '../utils/jwt.js';
+import jwt from 'jsonwebtoken';
+import { generateToken, generateRefreshToken } from '../utils/jwt.js';
 
 /**
  * @desc    Register new user and create tenant
@@ -46,17 +47,26 @@ export const register = async (req, res, next) => {
       role: 'ADMIN' // First user is admin
     });
 
-    // Generate token
+    // Generate tokens
     const token = generateToken({
       userId: user._id,
       tenantId: tenant._id,
       role: user.role
     });
+    
+    const refreshToken = generateRefreshToken({
+      userId: user._id,
+      tenantId: tenant._id
+    });
+    
+    // Save refresh token
+    await user.saveRefreshToken(refreshToken);
 
     res.status(201).json({
       success: true,
       data: {
         token,
+        refreshToken,
         user: {
           _id: user._id,
           name: user.name,
@@ -127,17 +137,26 @@ export const login = async (req, res, next) => {
     // Update last login
     await user.updateLastLogin();
 
-    // Generate token
+    // Generate tokens
     const token = generateToken({
       userId: user._id,
       tenantId: user.tenantId._id,
       role: user.role
     });
+    
+    const refreshToken = generateRefreshToken({
+      userId: user._id,
+      tenantId: user.tenantId._id
+    });
+    
+    // Save refresh token
+    await user.saveRefreshToken(refreshToken);
 
     res.status(200).json({
       success: true,
       data: {
         token,
+        refreshToken,
         user: {
           _id: user._id,
           name: user.name,
@@ -188,6 +207,112 @@ export const getMe = async (req, res, next) => {
           aiUsageLimit: user.tenantId.aiUsageLimit
         }
       }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Refresh access token
+ * @route   POST /api/auth/refresh
+ * @access  Public
+ */
+export const refreshToken = async (req, res, next) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      return res.status(400).json({
+        success: false,
+        error: 'Refresh token is required',
+        statusCode: 400
+      });
+    }
+
+    // Verify refresh token
+    let decoded;
+    try {
+      decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
+    } catch (error) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid or expired refresh token',
+        statusCode: 401
+      });
+    }
+
+    // Find user and validate stored refresh token
+    const user = await User.findById(decoded.userId)
+      .select('+refreshToken +refreshTokenExpiry')
+      .populate('tenantId');
+
+    if (!user || !user.isActive) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not found or inactive',
+        statusCode: 401
+      });
+    }
+
+    // Verify refresh token matches and hasn't expired
+    if (user.refreshToken !== refreshToken) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid refresh token',
+        statusCode: 401
+      });
+    }
+
+    if (user.refreshTokenExpiry && user.refreshTokenExpiry < new Date()) {
+      return res.status(401).json({
+        success: false,
+        error: 'Refresh token expired',
+        statusCode: 401
+      });
+    }
+
+    // Generate new access token
+    const newToken = generateToken({
+      userId: user._id,
+      tenantId: user.tenantId._id,
+      role: user.role
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        token: newToken,
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          tenantId: user.tenantId._id
+        }
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Logout user (invalidate refresh token)
+ * @route   POST /api/auth/logout
+ * @access  Private
+ */
+export const logout = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id);
+    
+    if (user) {
+      await user.clearRefreshToken();
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Logged out successfully'
     });
   } catch (error) {
     next(error);

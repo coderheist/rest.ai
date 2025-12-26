@@ -43,6 +43,16 @@ const userSchema = new mongoose.Schema({
     select: false
   },
   
+  refreshToken: {
+    type: String,
+    select: false
+  },
+  
+  refreshTokenExpiry: {
+    type: Date,
+    select: false
+  },
+  
   role: {
     type: String,
     enum: {
@@ -121,6 +131,20 @@ userSchema.statics.findByTenant = function(tenantId, filters = {}) {
 // Update lastLogin timestamp
 userSchema.methods.updateLastLogin = async function() {
   this.lastLogin = new Date();
+  await this.save({ validateBeforeSave: false });
+};
+
+// Save refresh token
+userSchema.methods.saveRefreshToken = async function(token) {
+  this.refreshToken = token;
+  this.refreshTokenExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+  await this.save({ validateBeforeSave: false });
+};
+
+// Clear refresh token
+userSchema.methods.clearRefreshToken = async function() {
+  this.refreshToken = undefined;
+  this.refreshTokenExpiry = undefined;
   await this.save({ validateBeforeSave: false });
 };
 

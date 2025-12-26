@@ -2,13 +2,11 @@ import axios from 'axios';
 
 /**
  * AI Service for LLM-based resume matching
- * Uses Google Gemini API (free tier) or OpenAI API
+ * Uses Google Gemini API
  */
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const USE_GEMINI = GEMINI_API_KEY && GEMINI_API_KEY !== 'your-gemini-api-key-here';
-const USE_OPENAI = !USE_GEMINI && OPENAI_API_KEY && OPENAI_API_KEY !== 'your-openai-api-key-here';
 
 class AIMatchingService {
   /**
@@ -16,20 +14,15 @@ class AIMatchingService {
    */
   async calculateAIMatch(jobData, resumeData) {
     // If no API key configured, fall back to rule-based
-    if (!USE_GEMINI && !USE_OPENAI) {
-      console.warn('No LLM API key configured. Using rule-based matching.');
+    if (!USE_GEMINI) {
+      console.warn('No Gemini API key configured. Using rule-based matching.');
       return null;
     }
 
     try {
       const prompt = this.buildMatchingPrompt(jobData, resumeData);
       
-      let response;
-      if (USE_GEMINI) {
-        response = await this.callGemini(prompt);
-      } else if (USE_OPENAI) {
-        response = await this.callOpenAI(prompt);
-      }
+      const response = await this.callGemini(prompt);
 
       return this.parseAIResponse(response);
     } catch (error) {
@@ -155,39 +148,6 @@ Important:
 
     const text = response.data.candidates[0].content.parts[0].text;
     return text.trim();
-  }
-
-  /**
-   * Call OpenAI API
-   */
-  async callOpenAI(prompt) {
-    const response = await axios.post(
-      'https://api.openai.com/v1/chat/completions',
-      {
-        model: 'gpt-3.5-turbo',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an expert recruiter. Respond only with valid JSON, no markdown formatting.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        temperature: 0.3,
-        max_tokens: 2048
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${OPENAI_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        timeout: 30000
-      }
-    );
-
-    return response.data.choices[0].message.content.trim();
   }
 
   /**

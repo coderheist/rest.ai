@@ -10,6 +10,22 @@ const api = axios.create({
   }
 });
 
+// Track if we're currently refreshing the token
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  
+  failedQueue = [];
+};
+
 // Request interceptor - Add token to requests
 api.interceptors.request.use(
   (config) => {
@@ -24,16 +40,71 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor - Handle errors globally
+// Response interceptor - Handle token refresh on 401
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Unauthorized - clear token and redirect to login
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+  async (error) => {
+    const originalRequest = error.config;
+
+    // If 401 and we haven't tried to refresh yet
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        // Wait for the token refresh to complete
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then(token => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            return api(originalRequest);
+          })
+          .catch(err => Promise.reject(err));
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      const refreshToken = localStorage.getItem('refreshToken');
+      
+      if (!refreshToken) {
+        // No refresh token, logout user
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+        return Promise.reject(error);
+      }
+
+      try {
+        // Request new access token
+        const response = await axios.post(`${API_URL}/auth/refresh`, {
+          refreshToken
+        });
+
+        const { token } = response.data.data;
+        localStorage.setItem('token', token);
+        
+        // Update authorization header
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        originalRequest.headers.Authorization = `Bearer ${token}`;
+        
+        processQueue(null, token);
+        isRefreshing = false;
+        
+        return api(originalRequest);
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        isRefreshing = false;
+        
+        // Refresh failed, logout user
+        localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+        
+        return Promise.reject(refreshError);
+      }
     }
+
     return Promise.reject(error);
   }
 );
@@ -42,17 +113,33 @@ api.interceptors.response.use(
 export const authAPI = {
   register: async (userData) => {
     const response = await api.post('/auth/register', userData);
+    if (response.data.data.refreshToken) {
+      localStorage.setItem('refreshToken', response.data.data.refreshToken);
+    }
     return response.data;
   },
 
   login: async (credentials) => {
     const response = await api.post('/auth/login', credentials);
+    if (response.data.data.refreshToken) {
+      localStorage.setItem('refreshToken', response.data.data.refreshToken);
+    }
     return response.data;
   },
 
   getMe: async () => {
     const response = await api.get('/auth/me');
     return response.data;
+  },
+
+  logout: async () => {
+    try {
+      await api.post('/auth/logout');
+    } finally {
+      localStorage.removeItem('token');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user');
+    }
   }
 };
 
@@ -141,6 +228,38 @@ export const jobAPI = {
   bulkUpdateStatus: async (jobIds, status) => {
     const response = await api.patch('/jobs/bulk/status', { jobIds, status });
     return response.data;
+  },
+
+  // AI-powered features
+  
+  // Rank candidates for a job using AI
+  rankCandidates: async (jobId, topN = 10) => {
+    const response = await api.post(`/jobs/${jobId}/rank-candidates`, { topN });
+    return response.data;
+  },
+
+  // Get top candidates for a job
+  getTopCandidates: async (jobId, limit = 10) => {
+    const response = await api.get(`/jobs/${jobId}/top-candidates?limit=${limit}`);
+    return response.data;
+  },
+
+  // Rescreen all candidates for a job
+  rescreenCandidates: async (jobId) => {
+    const response = await api.post(`/jobs/${jobId}/rescreen`);
+    return response.data;
+  },
+
+  // Get AI-powered job insights
+  getJobInsights: async (jobId) => {
+    const response = await api.get(`/jobs/${jobId}/insights`);
+    return response.data;
+  },
+
+  // Generate platform-specific job posts
+  generateJobPosts: async (jobId) => {
+    const response = await api.post(`/jobs/${jobId}/generate-posts`);
+    return response.data;
   }
 };
 
@@ -192,6 +311,11 @@ export const resumeAPI = {
     return response.data;
   },
 
+  // Alias for backward compatibility
+  getResumeById: async (resumeId) => {
+    return resumeAPI.getResume(resumeId);
+  },
+
   // Delete resume
   deleteResume: async (resumeId) => {
     const response = await api.delete(`/resumes/${resumeId}`);
@@ -199,8 +323,11 @@ export const resumeAPI = {
   },
 
   // Update resume status
-  updateStatus: async (resumeId, status) => {
-    const response = await api.patch(`/resumes/${resumeId}/status`, { status });
+  updateStatus: async (resumeId, status, additionalData = {}) => {
+    const response = await api.patch(`/resumes/${resumeId}/status`, { 
+      status, 
+      ...additionalData 
+    });
     return response.data;
   },
 
@@ -236,14 +363,32 @@ export const resumeAPI = {
   },
 
   // Bulk update resume status
-  bulkUpdateStatus: async (resumeIds, status) => {
-    const response = await api.patch('/resumes/bulk/status', { resumeIds, status });
+  bulkUpdateStatus: async (data) => {
+    const response = await api.patch('/resumes/bulk/status', data);
+    return response.data;
+  },
+
+  // Add note to resume
+  addNote: async (resumeId, data) => {
+    const response = await api.post(`/resumes/${resumeId}/notes`, data);
+    return response.data;
+  },
+
+  // Get notes for resume
+  getNotes: async (resumeId) => {
+    const response = await api.get(`/resumes/${resumeId}/notes`);
     return response.data;
   }
 };
 
 // Interview API calls
 export const interviewAPI = {
+  // Get all interview kits
+  getAll: async () => {
+    const response = await api.get('/interviews');
+    return response;
+  },
+
   // Generate interview kit for candidate
   generateKit: async (jobId, resumeId) => {
     const response = await api.post('/interviews/generate', { jobId, resumeId });
@@ -568,4 +713,5 @@ export const exportAPI = {
   }
 };
 
+export { api };
 export default api;

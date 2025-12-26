@@ -262,3 +262,47 @@ export const bulkUpdateStatus = asyncHandler(async (req, res) => {
     message: result.message
   });
 });
+
+/**
+ * @desc    Add note to resume
+ * @route   POST /api/resumes/:id/notes
+ * @access  Private
+ */
+export const addNote = asyncHandler(async (req, res) => {
+  const { note } = req.body;
+
+  if (!note || !note.trim()) {
+    res.status(400);
+    throw new Error('Note text is required');
+  }
+
+  const resume = await resumeService.addNote(
+    req.params.id,
+    note,
+    req.user._id,
+    req.user.tenantId
+  );
+
+  res.status(200).json({
+    success: true,
+    data: resume,
+    message: 'Note added successfully'
+  });
+});
+
+/**
+ * @desc    Get notes for resume
+ * @route   GET /api/resumes/:id/notes
+ * @access  Private
+ */
+export const getNotes = asyncHandler(async (req, res) => {
+  const notes = await resumeService.getNotes(
+    req.params.id,
+    req.user.tenantId
+  );
+
+  res.status(200).json({
+    success: true,
+    data: notes
+  });
+});

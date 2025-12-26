@@ -21,7 +21,7 @@ const storage = multer.diskStorage({
   filename: (req, file, cb) => {
     // Generate unique filename: timestamp-tenantId-originalname
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const tenantId = req.user?.tenantId || 'unknown';
+    const tenantId = req.tenantId || 'unknown';
     const ext = path.extname(file.originalname);
     const nameWithoutExt = path.basename(file.originalname, ext);
     const sanitizedName = nameWithoutExt.replace(/[^a-zA-Z0-9-_]/g, '_');

@@ -1,4 +1,5 @@
 import jobService from '../services/jobService.js';
+import jobPostService from '../services/jobPostService.js';
 import asyncHandler from 'express-async-handler';
 
 /**
@@ -196,6 +197,111 @@ const bulkUpdateStatus = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * @desc    Rank candidates for a job using AI
+ * @route   POST /api/jobs/:id/rank-candidates
+ * @access  Private
+ */
+const rankCandidates = asyncHandler(async (req, res) => {
+  const { topN = 10 } = req.body;
+
+  const result = await jobService.rankCandidatesForJob(
+    req.params.id,
+    req.user.tenantId,
+    topN
+  );
+
+  res.status(200).json({
+    success: true,
+    data: result,
+    message: 'Candidates ranked successfully'
+  });
+});
+
+/**
+ * @desc    Get top candidates for a job
+ * @route   GET /api/jobs/:id/top-candidates
+ * @access  Private
+ */
+const getTopCandidates = asyncHandler(async (req, res) => {
+  const limit = parseInt(req.query.limit) || 10;
+
+  const candidates = await jobService.getTopCandidates(
+    req.params.id,
+    req.user.tenantId,
+    limit
+  );
+
+  res.status(200).json({
+    success: true,
+    count: candidates.length,
+    data: candidates
+  });
+});
+
+/**
+ * @desc    Re-screen all candidates for a job
+ * @route   POST /api/jobs/:id/rescreen
+ * @access  Private
+ */
+const rescreenCandidates = asyncHandler(async (req, res) => {
+  const result = await jobService.rescreenCandidates(
+    req.params.id,
+    req.user.tenantId
+  );
+
+  res.status(200).json({
+    success: true,
+    data: result,
+    message: `Rescreened ${result.success} of ${result.total} candidates`
+  });
+});
+
+/**
+ * @desc    Get AI-powered insights for a job
+ * @route   GET /api/jobs/:id/insights
+ * @access  Private
+ */
+const getJobInsights = asyncHandler(async (req, res) => {
+  const insights = await jobService.getJobInsights(
+    req.params.id,
+    req.user.tenantId
+  );
+
+  res.status(200).json({
+    success: true,
+    data: insights
+  });
+});
+
+/**
+ * @desc    Generate platform-specific job posts
+ * @route   POST /api/jobs/:id/generate-posts
+ * @access  Private
+ */
+const generateJobPosts = asyncHandler(async (req, res) => {
+  const job = await jobService.getJobById(req.params.id, req.user.tenantId);
+
+  if (!job) {
+    res.status(404);
+    throw new Error('Job not found');
+  }
+
+  console.log('📝 Generating posts for job:', job._id, job.title);
+
+  const result = await jobPostService.generateJobPosts(job);
+
+  console.log('📤 Sending response:', result);
+
+  res.status(200).json({
+    success: result.success,
+    data: result.posts,
+    message: result.success 
+      ? 'Job posts generated successfully' 
+      : 'Generated fallback posts (AI service unavailable)'
+  });
+});
+
 export {
   createJob,
   getJobs,
@@ -206,5 +312,10 @@ export {
   getJobStats,
   getActiveJobs,
   duplicateJob,
-  bulkUpdateStatus
+  bulkUpdateStatus,
+  rankCandidates,
+  getTopCandidates,
+  rescreenCandidates,
+  getJobInsights,
+  generateJobPosts
 };
